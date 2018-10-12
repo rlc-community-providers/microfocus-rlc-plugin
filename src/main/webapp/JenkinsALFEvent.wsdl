@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="utf-8"?><wsdl:definitions xmlns:evt="http://www.eclipse.org/alf/schema/EventBase/1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:evc="http://www.eclipse.org/ALF/ExampleVocabulary" xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:tns="http://www.eclipse.org/alf/schema/EventBase/1" xmlns:xs="http://www.w3.org/2001/XMLSchema" name="ALFEventManager" targetNamespace="http://www.eclipse.org/alf/schema/EventBase/1" xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"><wsdl:documentation>
+    WARNING: PRELIMINARY VERSION SUBJECT TO CHANGE
+
+    Copyright Notice
+    The material in this document is Copyright (c) Serena Software, Inc. and others, 2017, 2018
+    Terms and Conditions:
+    The Eclipse Foundation makes available all content in this document ("Content").
+    Unless otherwise indicated below, the Content is provided to you under the terms
+    and conditions of the Eclipse Public License Version 1.0 ("EPL").
+    A copy of the EPL is available at http://www.eclipse.org/legal/epl-v10.html.
+    For purposes of the EPL, "Program" will mean the Content.
+    If you did not receive this Content directly from the Eclipse Foundation, the
+    Content is being redistributed by another party ("Redistributor") and different
+    terms and conditions may apply to your use of any object code in the Content.
+    Check the Redistributor's license that was provided with the Content.
+    If you did not receive any such license, contact the Redistributor.
+    Unless otherwise indicated below, the terms and conditions of the EPL still apply to the Content.
+  </wsdl:documentation><wsdl:types><xs:schema xmlns="http://www.eclipse.org/alf/schema/EventBase/1" attributeFormDefault="unqualified" elementFormDefault="qualified" targetNamespace="http://www.eclipse.org/alf/schema/EventBase/1" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="ServiceFlowFault" type="ServiceFlowFaultType" />
+  <xs:complexType name="ServiceFlowFaultType">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="FaultCode" type="xs:string" />
+      <xs:element minOccurs="0" name="FaultString" type="xs:string" />
+    </xs:sequence>
+  </xs:complexType>
+  <xs:simpleType name="SourceEventIdType">
+    <xs:restriction base="xs:string">
+      <xs:maxLength value="36" />
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="TimestampType">
+    <xs:restriction base="xs:dateTime" />
+  </xs:simpleType>
+  <xs:simpleType name="JenkinsALFEventEventNoticeEventType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="Pending" />
+      <xs:enumeration value="Success" />
+      <xs:enumeration value="Failed" />
+      <xs:enumeration value="Unstable" />
+      <xs:enumeration value="Aborted" />
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="JenkinsALFEventEventNoticeObjectType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="Job" />
+      <xs:enumeration value="Pipeline" />
+      <xs:enumeration value="Stage" />
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="ObjectIdType">
+    <xs:restriction base="xs:string" />
+  </xs:simpleType>
+  <xs:simpleType name="JenkinsALFEventProductType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="Jenkins" />
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="JenkinsALFEventProductVersionType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="2.0" />
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="JenkinsALFEventProductInstanceType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="Jenkins" />
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="ProductCallbackURIType">
+    <xs:restriction base="xs:anyURI" />
+  </xs:simpleType>
+  <xs:complexType name="JenkinsALFEventSource">
+    <xs:sequence>
+      <xs:element name="Product" type="JenkinsALFEventProductType" />
+      <xs:element name="ProductVersion" type="JenkinsALFEventProductVersionType" />
+      <xs:element name="ProductInstance" type="JenkinsALFEventProductInstanceType" />
+      <xs:element minOccurs="0" name="ProductCallbackURI" type="ProductCallbackURIType" />
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="ALFSecurityType">
+    <xs:sequence>
+      <xs:element name="UsernameToken">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="Username" type="xs:string" />
+            <xs:element name="Password" type="xs:string" />
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="CredentialsType">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="ALFSecurity" type="ALFSecurityType" />
+    </xs:sequence>
+  </xs:complexType>
+  <xs:simpleType name="EventIdType">
+    <xs:restriction base="xs:string">
+      <xs:maxLength value="36" />
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="ApplicationNameType">
+    <xs:restriction base="xs:string" />
+  </xs:simpleType>
+  <xs:simpleType name="EventMatchNameType">
+    <xs:restriction base="xs:string" />
+  </xs:simpleType>
+  <xs:simpleType name="ServiceFlowNameType">
+    <xs:restriction base="xs:string" />
+  </xs:simpleType>
+  <xs:simpleType name="ServiceFlowIdType">
+    <xs:restriction base="xs:string">
+      <xs:maxLength value="36" />
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="EnvironmentType">
+    <xs:restriction base="xs:string" />
+  </xs:simpleType>
+  <xs:complexType name="EmExtensionType">
+    <xs:sequence />
+  </xs:complexType>
+  <xs:complexType name="EmBaseType">
+    <xs:sequence>
+      <xs:element name="EmEventId" type="EventIdType" />
+      <xs:element name="EmTimestamp" type="TimestampType" />
+      <xs:element name="PrecedingEmEventId" type="EventIdType" />
+      <xs:element name="ApplicationName" type="ApplicationNameType" />
+      <xs:element name="EventMatchName" type="EventMatchNameType" />
+      <xs:element name="ServiceFlowName" type="ServiceFlowNameType" />
+      <xs:element name="ServiceFlowId" type="ServiceFlowIdType" />
+      <xs:element name="Callback" type="xs:boolean" />
+      <xs:element name="Environment" type="EnvironmentType" />
+      <xs:element name="EmUser" type="CredentialsType" />
+      <xs:element minOccurs="0" name="AttemptCount" type="xs:int" />
+      <xs:element minOccurs="0" name="EmExtension" type="EmExtensionType" />
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="BaseExtensionType">
+    <xs:sequence />
+  </xs:complexType>
+  <xs:complexType name="JenkinsALFEventEventNoticeEventBaseType">
+    <xs:sequence>
+      <xs:element name="EventId" type="SourceEventIdType" />
+      <xs:element name="Timestamp" type="TimestampType" />
+      <xs:element name="EventType" type="JenkinsALFEventEventNoticeEventType" />
+      <xs:element name="ObjectType" type="JenkinsALFEventEventNoticeObjectType" />
+      <xs:element name="ObjectId" type="ObjectIdType" />
+      <xs:element name="Source" type="JenkinsALFEventSource" />
+      <xs:element name="User" type="CredentialsType" />
+      <xs:element minOccurs="0" name="EventControl" type="EmBaseType" />
+      <xs:element minOccurs="0" name="BaseExtension" type="BaseExtensionType" />
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="DetailExtensionType">
+    <xs:sequence />
+  </xs:complexType>
+  <xs:complexType name="JenkinsALFEventEventNoticeExtension">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="branchName" type="xs:string" />
+      <xs:element minOccurs="0" name="changeId" type="xs:string" />
+      <xs:element minOccurs="0" name="changeUrl" type="xs:string" />
+      <xs:element minOccurs="0" name="changeTitle" type="xs:string" />
+      <xs:element minOccurs="0" name="changeAuthor" type="xs:string" />
+      <xs:element minOccurs="0" name="changeAuthorDisplayName" type="xs:string" />
+      <xs:element minOccurs="0" name="changeAuthorEmail" type="xs:string" />
+      <xs:element minOccurs="0" name="changeTarget" type="xs:string" />
+      <xs:element minOccurs="0" name="buildNumber" type="xs:string" />
+      <xs:element minOccurs="0" name="buildId" type="xs:string" />
+      <xs:element minOccurs="0" name="buildDisplayName" type="xs:string" />
+      <xs:element minOccurs="0" name="jobName" type="xs:string" />
+      <xs:element minOccurs="0" name="jobBaseName" type="xs:string" />
+      <xs:element minOccurs="0" name="buildTag" type="xs:string" />
+      <xs:element minOccurs="0" name="executionNumber" type="xs:string" />
+      <xs:element minOccurs="0" name="nodeName" type="xs:string" />
+      <xs:element minOccurs="0" name="nodeLabels" type="xs:string" />
+      <xs:element minOccurs="0" name="workspace" type="xs:string" />
+      <xs:element minOccurs="0" name="jenkinsHome" type="xs:string" />
+      <xs:element minOccurs="0" name="jenkinsUrl" type="xs:string" />
+      <xs:element minOccurs="0" name="buildUrl" type="xs:string" />
+      <xs:element minOccurs="0" name="jobUrl" type="xs:string" />
+      <xs:element minOccurs="0" name="javaHome" type="xs:string" />
+      <xs:element minOccurs="0" name="svnRevision" type="xs:string" />
+      <xs:element minOccurs="0" name="cvsBranch" type="xs:string" />
+      <xs:element minOccurs="0" name="gitCommit" type="xs:string" />
+      <xs:element minOccurs="0" name="gitUrl" type="xs:string" />
+      <xs:element minOccurs="0" name="gitBranch" type="xs:string" />
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="JenkinsALFEventEventNoticeALFEventType">
+    <xs:sequence>
+      <xs:element name="Base" type="JenkinsALFEventEventNoticeEventBaseType" />
+      <xs:element minOccurs="0" name="Detail" type="DetailExtensionType" />
+      <xs:element minOccurs="0" name="Extension" type="JenkinsALFEventEventNoticeExtension" />
+    </xs:sequence>
+    <xs:attribute default="1.0" name="version" type="xs:string" />
+  </xs:complexType>
+</xs:schema></wsdl:types><wsdl:message name="ServiceFlowFault"><wsdl:part name="ServiceFlowFault" element="tns:ServiceFlowFault" /></wsdl:message><wsdl:message name="EventNotice"><wsdl:part name="EventNotice" type="tns:JenkinsALFEventEventNoticeALFEventType" /></wsdl:message><wsdl:portType name="JenkinsALFEvent"><wsdl:operation name="EventNotice"><wsdl:input message="tns:EventNotice" /><wsdl:fault name="ServiceFlowFault" message="tns:ServiceFlowFault" /></wsdl:operation></wsdl:portType><wsdl:binding name="JenkinsALFEventSOAP" type="tns:JenkinsALFEvent"><soap:binding transport="http://schemas.xmlsoap.org/soap/http" style="rpc" /><wsdl:operation name="EventNotice"><soap:operation soapAction="" /><wsdl:input><soap:body use="literal" namespace="http://www.eclipse.org/alf/schema/EventBase/1" /></wsdl:input></wsdl:operation></wsdl:binding><wsdl:service name="JenkinsALFEvent"><wsdl:port name="JenkinsALFEventSOAP" binding="tns:JenkinsALFEventSOAP"><soap:address location="http://localhost:8080/ALFServiceFlowEngine/services/JenkinsALFEvent" /></wsdl:port></wsdl:service></wsdl:definitions>
