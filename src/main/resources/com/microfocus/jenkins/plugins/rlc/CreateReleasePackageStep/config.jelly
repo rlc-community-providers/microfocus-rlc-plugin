@@ -1,0 +1,44 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form" xmlns:c="/lib/credentials">
+
+    <j:set var="helpURL" value="/plugin/microfocus-rlc"/>
+
+    <f:entry field="aeUrl" title="${%Micro Focus RLC Application Engine URL}" help="${helpURL}/help-ae-url.html">
+        <f:textbox default="http://localhost" />
+    </f:entry>
+    <f:entry field="oeUrl" title="${%Micro Focus RLC Orchestration Engine URL}" help="${helpURL}/help-oe-url.html">
+        <f:textbox default="http://localhost:8085" />
+    </f:entry>
+    <f:entry field="credentialsId" title="${%Micro Focus RLC Credentials}" help="${helpURL}/help-credentialsId.html">
+        <c:select/>
+    </f:entry>
+
+    <f:entry field="projectName" title="${%Project Name}" help="${helpURL}/help-projectName.html">
+        <f:textbox default="TRM_RLM_TURNOVERS.TURNOVERS" />
+    </f:entry>
+    <f:entry field="title" title="${%Title}" help="${helpURL}/help-title.html">
+        <f:textbox default="Release ${BUILD_NUMBER}" />
+    </f:entry>
+    <f:entry field="description" title="${%Description}" help="${helpURL}/help-description.html">
+        <f:textarea default="Release of ${BUILD_NUMBER}" />
+    </f:entry>
+
+    <f:entry field="releaseTypeId" title="${%Release Type Id}" help="${helpURL}/help-releaseTypeId.html">
+        <f:textbox default="1" />
+    </f:entry>
+    <f:entry field="deploymentPathId" title="${%Deployment Path Id}" help="${helpURL}/help-deploymentPathId.html">
+        <f:textbox default="1" />
+    </f:entry>
+
+    <f:entry field="applicationId" title="${%Application Id}" help="${helpURL}/help-applicationId.html">
+        <f:textbox default="1" />
+    </f:entry>
+    <f:entry field="releaseTrainId" title="${%Release Train Id}" help="${helpURL}/help-releaseTrainId.html">
+        <f:textbox />
+    </f:entry>
+
+    <f:entry field="messageLog" title="${%Message Log}" help="${helpURL}/help-messageLog.html">
+        <f:textarea />
+    </f:entry>
+
+</j:jelly>
