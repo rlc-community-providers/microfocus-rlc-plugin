@@ -1,0 +1,47 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
+
+  <j:set var="helpURL" value="/plugin/microfocus-rlc"/>
+
+  <f:section title="RLC Server">
+
+    <f:entry title="">
+      <f:repeatable var="site" items="${descriptor.sites}">
+        <table width="100%">
+          <f:entry title="Profile Name" help="${helpURL}/help-profile.html">
+            <f:textbox name="rlc.profileName" value="${site.profileName}"/>
+          </f:entry>
+          <f:entry title="Application Engine URL" help="${helpURL}/help-aeUrl.html">
+            <f:textbox name="rlc.aeUrl" value="${site.aeUrl}"/>
+          </f:entry>
+          <f:entry title="Orchestration Engine URL" help="${helpURL}/help-oeUrl.html">
+            <f:textbox name="rlc.oeUrl" value="${site.oeUrl}"/>
+          </f:entry>
+          <f:entry title="User Name" help="${helpURL}/help-user.html">
+            <f:textbox name="rlc.user" value="${site.user}"/>
+          </f:entry>
+          <f:entry title="Password" help="${helpURL}/help-password.html">
+            <f:password name="rlc.password" value="${site.password}"/>
+          </f:entry>
+          <f:entry title="Release Train Table Id" help="${helpURL}/help-releaseTrainTableId.html">
+            <f:textbox name="rlc.releaseTrainTableId" value="${site.releaseTrainTableId}" default="1007"
+            />
+          </f:entry>
+          <f:entry title="Release Package Table Id" help="${helpURL}/help-releasePackageTableId.html">
+            <f:textbox name="rlc.releasePackageTableId" value="${site.releasePackageTableId}" default="1011"/>
+          </f:entry>
+          <f:entry title="">
+            <div style="text-align: right">
+              <f:repeatableDeleteButton/>
+              <f:validateButton
+                  title="${%Test Connection}" progress="${%Testing...}"
+                  method="testConnection" with="rlc.aeUrl,rlc.oeUrl,rlc.user,rlc.password,rlc.releaseTrainTableId,rlc.releasePackageTableId"/>
+            </div>
+          </f:entry>
+        </table>
+      </f:repeatable>
+    </f:entry>
+
+  </f:section>
+
+</j:jelly>
