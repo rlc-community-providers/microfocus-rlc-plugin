@@ -1,5 +1,5 @@
 /* ===========================================================================
- *  Copyright (c) 2017 Micro Focus. All rights reserved.
+ *  Copyright (c) 2018 Micro Focus. All rights reserved.
  *
  *  Use of the Sample Code provided by Micro Focus is governed by the following
  *  terms and conditions. By using the Sample Code, you agree to be bound by
@@ -47,7 +47,7 @@
  *  harmless Micro Focus from and against any and all liability, loss or claim
  *  arising from this agreement or from (i) your license of, use of or
  *  reliance upon the Sample Code or any related documentation or materials,
- *  or (ii) your development, use or reliance upon any application or
+ *  or (ii) your development, use or reliance upon any eventId or
  *  derivative work created from the Sample Code.
  *
  *  5.  TERMINATION OF THE LICENSE.  This agreement and the underlying
@@ -82,115 +82,75 @@
  * ===========================================================================
  */
 
-package com.microfocus.jenkins.plugins.rlc.model;
+package com.microfocus.jenkins.plugins.rlc;
 
-import com.cloudbees.plugins.credentials.CredentialsMatchers;
-import com.cloudbees.plugins.credentials.CredentialsProvider;
-import com.cloudbees.plugins.credentials.common.StandardCredentials;
-import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
-import com.cloudbees.plugins.credentials.common.UsernamePasswordCredentials;
-import com.cloudbees.plugins.credentials.domains.DomainRequirement;
-import com.microfocus.jenkins.plugins.rlc.client.RLCClient;
-import com.microfocus.jenkins.plugins.rlc.utils.RLCUtils;
-import hudson.AbortException;
-import hudson.FilePath;
-import hudson.Launcher;
-import hudson.model.AbstractProject;
-import hudson.model.Item;
+import com.microfocus.jenkins.plugins.rlc.configuration.RLCGlobalConfiguration;
 import hudson.model.Run;
 import hudson.model.TaskListener;
-import hudson.tasks.BuildStepDescriptor;
-import hudson.tasks.Builder;
-import hudson.util.FormValidation;
-import hudson.util.ListBoxModel;
-import jenkins.tasks.SimpleBuildStep;
-import org.kohsuke.stapler.*;
+import jenkins.model.GlobalConfiguration;
+import org.jenkinsci.plugins.workflow.steps.Step;
+import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
+import org.kohsuke.stapler.DataBoundSetter;
 
-import java.io.IOException;
 import java.io.PrintStream;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- * Generic Micro Focus Deployment Automation Step - Base Class
- *
- * For a new step, subclass this class and implement DescriptorImpl class
- * and perform methods.
- *
- * @author Kevin A. Lee
- */
-public abstract class RLCStep extends Builder implements SimpleBuildStep {
+public abstract class AbstractRLCStep extends Step {
 
-    private String url;
-    private String credentialsId;
-    private RLCClient RLCClient;
+    private String siteName;
     private PrintStream logger;
     private List<String> fileList = new ArrayList<String>();
 
-    public RLCStep() {
-        this.url = "http://localhost:8085";
+    private TaskListener listener;
+
+    public AbstractRLCStep(String siteName) {
+        this.siteName = siteName;
     }
 
-    /*
-    In the subclass create a constructor similar to the following:
-
-    @DataBoundConstructor
-    public RLCStep(final String url) {
-       this.url = RLCUtils.rmSlashFromUrl(url);
-    }
-    */
-
-    @DataBoundSetter
-    public void setUrl(String url) {
-        this.url = url;
-    }
-
-    public String getUrl() {
-        return this.url;
+    public String getSiteName() {
+        return siteName;
     }
 
     @DataBoundSetter
-    public void setCredentialsId(final String credentialsId) {
-        this.credentialsId = credentialsId;
-    }
-
-    public String getCredentialsId() {
-        return this.credentialsId;
-    }
-
-    public void setRLCClient(RLCClient RLCClient) {
-        this.RLCClient = RLCClient;
-    }
-
-    public RLCClient getRLCClient() {
-        return this.RLCClient;
-    }
-
-    public void setLogger(PrintStream logger) {
-        this.logger = logger;
+    public void setSiteName(String siteName) {
+        this.siteName = siteName;
     }
 
     public PrintStream getLogger() {
         return this.logger;
     }
 
-    public void setFileList(List<String> fileList) {
-        this.fileList = fileList;
+    public void setLogger(PrintStream logger) {
+        this.logger = logger;
     }
 
     public List<String> getFileList() {
         return fileList;
     }
 
+    public void setFileList(List<String> fileList) {
+        this.fileList = fileList;
+    }
+
+    public TaskListener getListener() {
+        return this.listener;
+    }
+
+    public void setListener(TaskListener listener) {
+        this.listener = listener;
+    }
+
     /**
      * Write text to the build's console log (logger), prefixed with
      * "[Micro Focus RLC]".
      *
-     * @param text   message to log
+     * @param text message to log
      */
     public void log(final String text) {
-        this.getLogger().println("[Micro Focus RLC] " + text);
+        if (listener.getLogger() != null)
+            listener.getLogger().println("[Micro Focus RLC] " + text);
     }
 
     /**
@@ -218,34 +178,31 @@ public abstract class RLCStep extends Builder implements SimpleBuildStep {
 
     /*
      *
-     * Extend this class as "DescriptorImpl" and include additional fields/validation for the steps
+     * Extend this class as "MyClassNameDescriptor" and include additional fields/validation for the steps
      * - include the @Extension point (commented out below) and @Symbol annotation with the relevant
      * name you want the step to executed as.
      */
-    //@Symbol("daStep")
+    //@Symbol("rlcStep")
     //@Extension // This indicates to Jenkins that this is an implementation of an extension point.
-    public abstract static class RLCDescriptorImpl extends BuildStepDescriptor<Builder> {
-        public RLCDescriptorImpl() {
+    public abstract static class AbstractRLCDescriptorImpl extends StepDescriptor {
+
+        private RLCGlobalConfiguration rlcGlobalConfiguration;
+
+        public AbstractRLCDescriptorImpl() {
             load();
+            this.rlcGlobalConfiguration = GlobalConfiguration.all().get(RLCGlobalConfiguration.class);
         }
 
-        public ListBoxModel doFillCredentialsIdItems(@AncestorInPath Item item) {
-            return new StandardListBoxModel().withEmptySelection().withMatching(
-                    CredentialsMatchers.anyOf(
-                            CredentialsMatchers.instanceOf(UsernamePasswordCredentials.class)
-                    ),
-                    CredentialsProvider.lookupCredentials(StandardCredentials.class, item, null, Collections.<DomainRequirement>emptyList())
-            );
+        public RLCSite getSiteByName(String siteName) {
+            return rlcGlobalConfiguration.getSiteByName(siteName);
         }
 
-        private FormValidation verifyUrl(final String url) {
-            if (!RLCUtils.isUrl(url))
-                return FormValidation.error("Not a valid URL");
-            return FormValidation.ok();
+        public RLCSite[] getSites() {
+            return rlcGlobalConfiguration.getSites();
         }
 
-        public FormValidation doCheckUrl(@QueryParameter final String value) {
-            return verifyUrl(value);
+        public RLCSite getSite(String siteName) {
+            return getSiteByName(siteName);
         }
 
         /*
@@ -256,35 +213,20 @@ public abstract class RLCStep extends Builder implements SimpleBuildStep {
             return "Micro Focus RLC Step";
         }
 
+        /*
+         * Override this method with the steps function name
+         */
         @Override
-        public boolean isApplicable(Class<? extends AbstractProject> jobType) {
-            return true;
+        public String getFunctionName() {
+            return "rlcStep";
+        }
+
+        @Override
+        public Set<? extends Class<?>> getRequiredContext() {
+            return Collections.singleton(Run.class);
         }
     }
 
-    /*
-     * This is an example perform method, replace this in your subclass
-     */
-    @Override
-    public void perform(Run<?,?> run, FilePath workspace, Launcher launcher, TaskListener listener)
-        throws InterruptedException, IOException {
-
-        this.setLogger(listener.getLogger());
-
-        final UsernamePasswordCredentials usernamePasswordCredentials = RLCUtils.getUsernamePasswordCredentials(getCredentialsId());
-        if (usernamePasswordCredentials == null) {
-            throw new AbortException("Micro Focus RLC account credentials are not filled in.");
-        }
-
-        RLCClient RLCClient = new RLCClient(this.getUrl(),
-                usernamePasswordCredentials.getUsername(),
-                usernamePasswordCredentials.getPassword());
-        try {
-            RLCClient.verifyConnection();
-        } catch (Exception ex) {
-            throw new AbortException("Unable to verify connection to Micro Focus RLC: " + ex.getLocalizedMessage());
-        }
-
-    }
 }
+
 

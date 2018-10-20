@@ -85,81 +85,93 @@
 package com.microfocus.jenkins.plugins.rlc;
 
 import com.microfocus.jenkins.plugins.rlc.client.RLCClient;
-import com.microfocus.jenkins.plugins.rlc.model.ALFEvent;
-import com.microfocus.jenkins.plugins.rlc.model.JenkinsEnvironment;
+import com.microfocus.jenkins.plugins.rlc.utils.RLCUtils;
 import hudson.AbortException;
-import hudson.EnvVars;
 import hudson.Extension;
+import hudson.model.Result;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.util.FormValidation;
 import hudson.util.Secret;
 import org.apache.commons.lang.StringUtils;
+import org.codehaus.jettison.json.JSONObject;
 import org.jenkinsci.Symbol;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
-import org.kohsuke.stapler.QueryParameter;
 
 import javax.annotation.Nonnull;
+import javax.ws.rs.core.UriBuilder;
+import java.net.URI;
 import java.util.Collections;
 import java.util.Set;
 
 /**
- * Step to send an ALF Event to Release Control (via SBM)
+ * Step to get the state of a Release Train
  *
  * @author Kevin A. Lee
  */
-public class SendALFEventStep extends AbstractRLCStep {
+public class GetReleaseTrainStateStep extends AbstractRLCStep {
 
     @Extension
-    public static final SendALFEventDescriptor DESCRIPTOR = new SendALFEventDescriptor();
+    public static final GetReleaseTrainStateDescriptor DESCRIPTOR = new GetReleaseTrainStateDescriptor();
 
-    private String eventId;
-    private String eventType;
-    private String objectId;
-    private String objectType;
+    private Integer releaseTrainId;
+    private Boolean waitForState;
+    private String desiredState;
+    private Integer maxRetries;
+    private Integer delayInterval;
+
 
     @DataBoundConstructor
-    public SendALFEventStep(String siteName) {
+    public GetReleaseTrainStateStep(String siteName) {
         super(siteName);
     }
 
-    public String getEventId() {
-        return this.eventId;
+    public Integer getReleaseTrainId() {
+        return this.releaseTrainId;
     }
 
     @DataBoundSetter
-    public void setEventId(final String eventId) {
-        this.eventId = eventId;
+    public void setReleaseTrainId(final Integer releaseTrainId) {
+        this.releaseTrainId = releaseTrainId;
     }
 
-    public String getEventType() {
-        return this.eventType;
-    }
-
-    @DataBoundSetter
-    public void setEventType(final String eventType) {
-        this.eventType = eventType;
-    }
-
-    public String getObjectId() {
-        return this.objectId;
+    public Boolean getWaitForState() {
+        return waitForState;
     }
 
     @DataBoundSetter
-    public void setObjectId(final String objectId) {
-        this.objectId = objectId;
+    public void setWaitForState(Boolean waitForState) {
+        this.waitForState = waitForState;
     }
 
-    public String getObjectType() {
-        return this.objectType;
+    public String getDesiredState() {
+        return desiredState;
     }
 
     @DataBoundSetter
-    public void setObjectType(final String objectType) {
-        this.objectType = objectType;
+    public void setDesiredState(String desiredState) {
+        this.desiredState = desiredState;
+    }
+
+    public Integer getMaxRetries() {
+        return maxRetries;
+    }
+
+    @DataBoundSetter
+    public void setMaxRetries(Integer maxRetries) {
+        this.maxRetries = maxRetries;
+    }
+
+    public Integer getDelayInterval() {
+        return delayInterval;
+    }
+
+    @DataBoundSetter
+    public void setDelayInterval(Integer delayInterval) {
+        this.delayInterval = delayInterval;
     }
 
     @Override
@@ -168,70 +180,48 @@ public class SendALFEventStep extends AbstractRLCStep {
     }
 
     /**
-     * Descriptor for {@link SendALFEventStep}. Used as a singleton.
+     * Descriptor for {@link GetReleaseTrainStateStep}. Used as a singleton.
      * The class is marked as public so that it can be accessed from views.
      *
      * <p>
-     * See {@code src/main/resources/com/microfocus/jenkins/plugins/rlc/SendALFEventStep/*.jelly}
+     * See {@code src/main/resources/com/microfocus/jenkins/plugins/rlc/GetReleaseTrainStateStep/*.jelly}
      * for the actual HTML fragment for the configuration screen.
      * </p>
      */
-    @Symbol("rlcSendALFEvent")
+    @Symbol("rlcGetReleaseTrainState")
     @Extension
-    public static class SendALFEventDescriptor extends AbstractRLCDescriptorImpl {
+    public static class GetReleaseTrainStateDescriptor extends AbstractRLCDescriptorImpl {
 
-        private FormValidation verifyEventId(final String eventId) {
-            if (StringUtils.isEmpty(eventId))
-                return FormValidation.error("An eventId is required");
-            return FormValidation.ok();
-        }
-
-        private FormValidation verifyEventType(final String eventType) {
-            if (StringUtils.isEmpty(eventType))
-                return FormValidation.error("An eventType is required");
-            return FormValidation.ok();
-        }
-
-        private FormValidation verifyObjectId(final String objectId) {
-            if (StringUtils.isEmpty(objectId))
-                return FormValidation.error("An objectId is required");
-            return FormValidation.ok();
-        }
-
-        private FormValidation verifyObjectType(final String objectType) {
-            if (StringUtils.isEmpty(objectType))
-                return FormValidation.error("An objectType is required");
+        private FormValidation verifyReleaseTrainId(final Integer releaseTrainId) {
+            if (releaseTrainId == null || releaseTrainId == 0)
+                return FormValidation.error("A Release Train Id is required");
             return FormValidation.ok();
         }
 
         // TODO: more validation of contents
-        public FormValidation doCheckEventType(@QueryParameter final String value) {
-            return FormValidation.ok();
-        }
 
         @Override
         public String getDisplayName() {
-            return "Micro Focus RLC Send ALF Event";
+            return "Micro Focus RLC Release Train State";
         }
 
         @Override
         public String getFunctionName() {
-            return "rlcSendALFEvent";
+            return "rlcGetReleaseTrainState";
         }
 
         @Override
         public Set<? extends Class<?>> getRequiredContext() {
             return Collections.singleton(Run.class);
         }
-
     }
 
     public static final class Execution extends AbstractItemProviderExecution<String> {
 
         private static final long serialVersionUID = 1L;
-        private transient SendALFEventStep step;
+        private transient GetReleaseTrainStateStep step;
 
-        Execution(@Nonnull StepContext context, @Nonnull SendALFEventStep step) {
+        Execution(@Nonnull StepContext context, @Nonnull GetReleaseTrainStateStep step) {
             super(context);
             this.step = step;
         }
@@ -239,54 +229,20 @@ public class SendALFEventStep extends AbstractRLCStep {
         @Override
         protected String run() throws Exception {
 
-            TaskListener listener = this.getContext().get(TaskListener.class);
-
             // set listener in Abstract class for logging
-            step.setListener(listener);
+            step.setListener(this.getContext().get(TaskListener.class));
 
             String siteName = step.getSiteName();
             RLCSite site = DESCRIPTOR.getSiteByName(siteName);
 
-            JenkinsEnvironment jenkinsEnvironment = new JenkinsEnvironment();
-            EnvVars envVars = this.getEnvironment(listener);
-            //step.log(envVars.toString());
-
-            // TODO: must be a better way with reflection?
-            jenkinsEnvironment.setBranchName(envVars.get("BRANCH_NAME", ""));
-            jenkinsEnvironment.setChangeId(envVars.get("CHANGE_ID", ""));
-            jenkinsEnvironment.setChangeTitle(envVars.get("CHANGE_TITLE", ""));
-            jenkinsEnvironment.setChangeAuthor(envVars.get("CHANGE_AUTHOR", ""));
-            jenkinsEnvironment.setChangeAuthorDisplayName(envVars.get("CHANGE_AUTHOR_DISPLAY_NAME", ""));
-            jenkinsEnvironment.setChangeAuthorEmail(envVars.get("CHANGE_AUTHOR_EMAIL", ""));
-            jenkinsEnvironment.setChangeTarget(envVars.get("CHANGE_TARGET", ""));
-            jenkinsEnvironment.setBuildNumber(envVars.get("BUILD_NUMBER", ""));
-            jenkinsEnvironment.setBuildId(envVars.get("BUILD_ID", ""));
-            jenkinsEnvironment.setBuildDisplayName(envVars.get("BUILD_DISPLAY_NAME", ""));
-            jenkinsEnvironment.setJobName(envVars.get("JOB_NAME", ""));
-            jenkinsEnvironment.setJobBaseName(envVars.get("JOB_BASE_NAME", ""));
-            jenkinsEnvironment.setBuildTag(envVars.get("BUILD_TAG", ""));
-            jenkinsEnvironment.setExecutionNumber(envVars.get("EXECUTION_NUMBER", ""));
-            jenkinsEnvironment.setNodeName(envVars.get("NODE_NAME", ""));
-            jenkinsEnvironment.setNodeLabels(envVars.get("NODE_LABELS", ""));
-            jenkinsEnvironment.setWorkspace(envVars.get("WORKSPACE", ""));
-            jenkinsEnvironment.setJenkinsHome(envVars.get("JENKINS_HOME", ""));
-            jenkinsEnvironment.setJenkinsUrl(envVars.get("JENKINS_URL", ""));
-            jenkinsEnvironment.setBuildUrl(envVars.get("BUILD_URL", ""));
-            jenkinsEnvironment.setJobUrl(envVars.get("JOB_URL", ""));
-            jenkinsEnvironment.setJavaHome(envVars.get("JAVA_HOME", ""));
-            jenkinsEnvironment.setSvnRevision(envVars.get("SVN_REVISION", ""));
-            jenkinsEnvironment.setCvsBranch(envVars.get("CVS_BRANCH", ""));
-            jenkinsEnvironment.setGitCommit(envVars.get("GIT_COMMIT", ""));
-            jenkinsEnvironment.setGitUrl(envVars.get("GIT_URL", ""));
-            jenkinsEnvironment.setGitBranch(envVars.get("GIT_BRANCH", ""));
-
-            String resolvedEventId = this.getEnvironment(listener).expand(step.getEventId());
-            String resolvedEventType = this.getEnvironment(listener).expand(step.getEventType());
-            String resolvedObjectId = this.getEnvironment(listener).expand(step.getObjectId());
-            String resolvedObjectType = this.getEnvironment(listener).expand(step.getObjectType());
+            step.log("Retrieving state of Release Train [" + site.getReleaseTrainTableId() + ":"
+                    + step.getReleaseTrainId() + "]");
+            if (step.getWaitForState()) {
+                step.log("Waiting for desired state: " + step.getDesiredState());
+            }
 
             // check connection to Micro Focus DA
-            RLCClient rlcClient = new RLCClient(
+            com.microfocus.jenkins.plugins.rlc.client.RLCClient rlcClient = new RLCClient(
                     site.getAeUrl(),
                     site.getOeUrl(),
                     site.getUser(),
@@ -297,24 +253,67 @@ public class SendALFEventStep extends AbstractRLCStep {
                 throw new AbortException("Unable to connect to Micro Focus Release Control: " + ex.toString());
             }
 
-            try {
-                ALFEvent alfEvent = new ALFEvent();
-                if (!StringUtils.isEmpty(resolvedEventId)) alfEvent.setEventId(resolvedEventId);
-                if (!StringUtils.isEmpty(resolvedEventType)) alfEvent.setEventType(resolvedEventType);
-                if (!StringUtils.isEmpty(resolvedObjectId)) alfEvent.setObjectId(resolvedObjectId);
-                if (!StringUtils.isEmpty(resolvedObjectType)) alfEvent.setObjectType(resolvedObjectType);
-                alfEvent.setUsername(site.getUser());
-                alfEvent.setPassword(site.getPassword());
-                alfEvent.setJenkinsEnvironment(jenkinsEnvironment);
-                step.log("Sending: " + alfEvent.toString());
-                rlcClient.generateALFEvent(alfEvent);
-                step.log("Sent.");
-            } catch (Exception ex) {
-                throw new AbortException("Unable to send ALF Event: " + ex.toString());
+            UriBuilder uriBuilder = UriBuilder.fromPath(site.getAeUrl()).path("jsonapi").path("GetItem")
+                    .path(site.getReleaseTrainTableId().toString())
+                    .path(step.getReleaseTrainId().toString());
+            URI uri = uriBuilder.build();
+
+            String titleVal = "";
+            String stateVal = "";
+            String itemUrl = "";
+            int numTries = 0;
+            boolean finished = false;
+            while (!finished) {
+                try {
+                    String jsonOut = rlcClient.executeJSONGet(uri);
+                    JSONObject itemObj = new JSONObject(jsonOut).optJSONObject("item");
+                    if (itemObj != null) {
+                        JSONObject fieldsObj = itemObj.getJSONObject("fields");
+                        JSONObject idObj = itemObj.getJSONObject("id");
+                        JSONObject stateObj = fieldsObj.getJSONObject("STATE");
+                        JSONObject titleObj = fieldsObj.getJSONObject("TITLE");
+                        itemUrl = (String) idObj.get("url");
+                        stateVal = (String) stateObj.get("value");
+                        titleVal = (String) titleObj.get("value");
+
+                        if (step.getWaitForState()) {
+                            if (StringUtils.equalsIgnoreCase(stateVal, step.getDesiredState())) {
+                                this.getContext().setResult(Result.SUCCESS);
+                                finished = true;
+                            } else {
+                                if (step.getMaxRetries() != -1 && ++numTries == step.getMaxRetries()) {
+                                    step.log("Maximum number of retries reached ... aborting ...");
+                                    finished = true;
+                                    this.getContext().setResult(Result.ABORTED);
+                                } else {
+                                    step.log("Current State of Release Train \"" + titleVal + "\" is: " + stateVal);
+                                    try {
+                                        Thread.sleep(step.getDelayInterval());
+                                    } catch (InterruptedException ex) {
+                                        throw new AbortException("Unable to Get Release Train State: " + ex.toString());
+                                    }
+                                }
+                            }
+                        } else {
+                            this.getContext().setResult(Result.SUCCESS);
+                            finished = true;
+                        }
+
+                    }
+                } catch (Exception ex) {
+                    throw new AbortException("Unable to Get Release Train State: " + ex.toString());
+                }
             }
 
-            return resolvedEventId;
+            step.log("State of Release Train \"" + titleVal + "\" is: " + stateVal);
+            step.log("See: " + RLCUtils.setWorkcenterUrl(itemUrl));
+
+            return stateVal;
+
         }
+
     }
+
 }
+
 

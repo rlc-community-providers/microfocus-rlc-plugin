@@ -1,5 +1,5 @@
 /* ===========================================================================
- *  Copyright (c) 2017 Micro Focus. All rights reserved.
+ *  Copyright (c) 2018 Micro Focus. All rights reserved.
  *
  *  Use of the Sample Code provided by Micro Focus is governed by the following
  *  terms and conditions. By using the Sample Code, you agree to be bound by
@@ -47,7 +47,7 @@
  *  harmless Micro Focus from and against any and all liability, loss or claim
  *  arising from this agreement or from (i) your license of, use of or
  *  reliance upon the Sample Code or any related documentation or materials,
- *  or (ii) your development, use or reliance upon any application or
+ *  or (ii) your development, use or reliance upon any eventId or
  *  derivative work created from the Sample Code.
  *
  *  5.  TERMINATION OF THE LICENSE.  This agreement and the underlying
@@ -89,12 +89,16 @@ import java.util.Date;
 import java.util.UUID;
 
 /**
- *  Micro Focus ALFEvent Model
+ * Micro Focus ALF Event Model
  *
  * @author Kevin A. Lee
  */
 public class ALFEvent {
 
+    private final static String NAMESPACE = "ns";
+    private final static String NAMESPACE_URI = "http://www.eclipse.org/alf/schema/EventBase/1";
+    // extended data
+    JenkinsEnvironment jenkinsEnvironment;
     private String namespace;
     private String nameSpaceURI;
     private String eventId;
@@ -108,11 +112,34 @@ public class ALFEvent {
     private String password;
     private String timestamp;
 
-    // extended data
-    JenkinsEnvironment jenkinsEnvironment;
+    public ALFEvent() {
+        this(UUID.randomUUID().toString(), "Job", "1", "Pending",
+                "Jenkins", "2.0", "Jenkins",
+                "admin", "", null);
+    }
 
-    private final static String NAMESPACE = "ns";
-    private final static String NAMESPACE_URI = "http://www.eclipse.org/alf/schema/EventBase/1";
+    public ALFEvent(String eventId, String eventType, String objectId, String objectType,
+                    String productName, String productVersion, String productInstance,
+                    String username, String password, JenkinsEnvironment jenkinsEnvironment) {
+        if (eventId == null || eventId.length() == 0) {
+            this.eventId = UUID.randomUUID().toString();
+        } else {
+            this.eventId = eventId;
+        }
+        this.eventType = eventType;
+        this.objectId = objectId;
+        this.objectType = objectType;
+        this.productName = productName;
+        this.productVersion = productVersion;
+        this.productInstance = productInstance;
+        this.username = username;
+        this.password = password;
+        this.jenkinsEnvironment = jenkinsEnvironment;
+        this.namespace = ALFEvent.NAMESPACE;
+        this.nameSpaceURI = ALFEvent.NAMESPACE_URI;
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyy-MM-dd'T'hh:mm:ss");
+        this.timestamp = dateFormat.format(new Date());
+    }
 
     public String getNamespace() {
         return namespace;
@@ -216,35 +243,6 @@ public class ALFEvent {
 
     public void setJenkinsEnvironment(JenkinsEnvironment jenkinsEnvironment) {
         this.jenkinsEnvironment = jenkinsEnvironment;
-    }
-
-    public ALFEvent() {
-        this(UUID.randomUUID().toString(), "Job", "1", "Pending",
-                "Jenkins", "2.0", "Jenkins",
-                "admin", "", null);
-    }
-
-    public ALFEvent(String eventId, String eventType, String objectId, String objectType,
-                    String productName, String productVersion, String productInstance,
-                    String username, String password, JenkinsEnvironment jenkinsEnvironment) {
-        if (eventId == null || eventId.length() == 0) {
-            this.eventId = UUID.randomUUID().toString();
-        } else {
-            this.eventId = eventId;
-        }
-        this.eventType = eventType;
-        this.objectId = objectId;
-        this.objectType = objectType;
-        this.productName = productName;
-        this.productVersion = productVersion;
-        this.productInstance = productInstance;
-        this.username = username;
-        this.password = password;
-        this.jenkinsEnvironment = jenkinsEnvironment;
-        this.namespace = ALFEvent.NAMESPACE;
-        this.nameSpaceURI = ALFEvent.NAMESPACE_URI;
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyy-MM-dd'T'hh:mm:ss");
-        this.timestamp =  dateFormat.format(new Date());
     }
 
     @Override

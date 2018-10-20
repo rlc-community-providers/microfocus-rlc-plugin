@@ -1,0 +1,32 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
+
+    <j:set var="helpURL" value="/plugin/microfocus-rlc"/>
+
+    <f:entry title="RLC Server" help="${helpURL}/help-site.html" field="siteName">
+        <select class="setting-input" name="getreleasepackagestate.siteName">
+            <j:forEach var="s" items="${descriptor.sites}">
+                <f:option selected="${s.displayName==instance.siteName}">${s.displayName}</f:option>
+            </j:forEach>
+        </select>
+    </f:entry>
+
+    <f:entry field="releasePackageId" title="${%Release Package Id}" help="${helpURL}/help-releasePackageId.html">
+        <f:textbox />
+    </f:entry>
+
+    <f:entry field="waitForState" title="${%Wait for State}" help="${helpURL}/help-waitForState.html">
+        <f:checkbox />
+    </f:entry>
+    <f:entry field="desiredState" title="${%Desired State}" help="${helpURL}/help-desiredState.html">
+        <f:textbox />
+    </f:entry>
+
+    <f:entry field="delayInterval" title="${%Delay Interval}" help="${helpURL}/help-delayInterval.html">
+        <f:textbox default="60000"/>
+    </f:entry>
+    <f:entry field="maxRetries" title="${%Maximum Retries}" help="${helpURL}/help-maxRetries.html">
+        <f:textbox default="-1"/>
+    </f:entry>
+
+</j:jelly>

@@ -1,16 +1,14 @@
 <?jelly escape-by-default='true'?>
-<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form" xmlns:c="/lib/credentials">
+<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
 
     <j:set var="helpURL" value="/plugin/microfocus-rlc"/>
 
-    <f:entry field="aeUrl" title="${%Micro Focus RLC Application Engine URL}" help="${helpURL}/help-ae-url.html">
-        <f:textbox default="http://localhost" />
-    </f:entry>
-    <f:entry field="oeUrl" title="${%Micro Focus RLC Orchestration Engine URL}" help="${helpURL}/help-oe-url.html">
-        <f:textbox default="http://localhost:8085" />
-    </f:entry>
-    <f:entry field="credentialsId" title="${%Micro Focus RLC Credentials}" help="${helpURL}/help-credentialsId.html">
-        <c:select/>
+    <f:entry title="RLC Server" help="${helpURL}/help-site.html" field="siteName">
+        <select class="setting-input" name="getreleasepackagestate.siteName">
+            <j:forEach var="s" items="${descriptor.sites}">
+                <f:option selected="${s.displayName==instance.siteName}">${s.displayName}</f:option>
+            </j:forEach>
+        </select>
     </f:entry>
 
     <f:entry field="projectName" title="${%Project Name}" help="${helpURL}/help-projectName.html">

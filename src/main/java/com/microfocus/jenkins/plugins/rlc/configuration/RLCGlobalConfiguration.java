@@ -82,95 +82,89 @@
  * ===========================================================================
  */
 
-package com.microfocus.jenkins.plugins.rlc.utils;
+package com.microfocus.jenkins.plugins.rlc.configuration;
 
-import com.cloudbees.plugins.credentials.Credentials;
-import com.cloudbees.plugins.credentials.CredentialsMatchers;
-import com.cloudbees.plugins.credentials.CredentialsProvider;
-import com.cloudbees.plugins.credentials.common.UsernamePasswordCredentials;
-import com.cloudbees.plugins.credentials.domains.DomainRequirement;
-import hudson.security.ACL;
-import jenkins.model.Jenkins;
-import org.apache.commons.lang.StringUtils;
-import org.jenkinsci.plugins.plaincredentials.StringCredentials;
+import com.microfocus.jenkins.plugins.rlc.RLCSite;
+import hudson.Extension;
+import hudson.util.CopyOnWriteList;
+import hudson.util.FormFieldValidator;
+import jenkins.model.GlobalConfiguration;
+import net.sf.json.JSONObject;
+import org.kohsuke.stapler.QueryParameter;
+import org.kohsuke.stapler.StaplerRequest;
+import org.kohsuke.stapler.StaplerResponse;
 
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.Collections;
+import javax.servlet.ServletException;
+import java.io.IOException;
+import java.util.Iterator;
 
-public class RLCUtils {
+@Extension
+public class RLCGlobalConfiguration extends GlobalConfiguration {
 
-    /**
-     * Remove the trailing slash from url.
-     *
-     * @param url the URL
-     * @return URL with the trailing slash removed, if it exists.
-     */
-    public static String rmSlashFromUrl(final String url) {
-        if (!StringUtils.isEmpty(url)) {
-            return url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
-        } else {
-            return url;
-        }
+    private final CopyOnWriteList<RLCSite> sites = new CopyOnWriteList<>();
+
+    public RLCGlobalConfiguration() {
+        load();
     }
 
-    /**
-     * Check if a String is a valid URL
-     *
-     * @param url the URL
-     * @return true if a valid URL, else false
-     */
-    public static boolean isUrl(final String url) {
-        boolean valid = false;
-        if (url != null && url.length() > 0) {
-            try {
-                new URL(url);
-                valid = true;
-            } catch (MalformedURLException e) {
-                // malformed; ignore
+    @Override
+    public synchronized void load() {
+        super.load();
+    }
+
+    @Override
+    public String getHelpFile() {
+        return "/plugin/microfocus-rlc/help.html";
+    }
+
+    public RLCSite[] getSites() {
+        Iterator<RLCSite> it = sites.iterator();
+        int size = 0;
+        while (it.hasNext()) {
+            it.next();
+            size++;
+        }
+        return sites.toArray(new RLCSite[size]);
+    }
+
+    public RLCSite getSiteByName(String siteName) {
+        if (siteName == null && sites.size() > 0) {
+            return sites.get(0);
+        }
+        for (RLCSite site : sites) {
+            if (site.getDisplayName().equals(siteName)) {
+                return site;
             }
         }
-        return valid;
+        return null;
     }
 
-    /**
-     * Get the token from the credentials identified by the given id.
-     *
-     * @param credentialsId The id for the credentials
-     * @return Jenkins credentials
-     */
-    public static StringCredentials getTokenCredentials(final String credentialsId) {
-        return getJenkinsCredentials(credentialsId, StringCredentials.class);
+    @Override
+    public boolean configure(StaplerRequest req, JSONObject formData) {
+        sites.replaceBy(req.bindParametersToList(RLCSite.class, "rlc."));
+        save();
+        return true;
     }
 
-    /**
-     * Get the user/pass from the credentials identified by the given id.
-     *
-     * @param credentialsId The id for the credentials
-     * @return Jenkins credentials
-     */
-    public static UsernamePasswordCredentials getUsernamePasswordCredentials(final String credentialsId) {
-        return getJenkinsCredentials(credentialsId, UsernamePasswordCredentials.class);
-    }
-
-    /**
-     * Get the credentials identified by the given id from the Jenkins credential store.
-     *
-     * @param credentialsId    The id for the credentials
-     * @param credentialsClass The class of credentials to return
-     * @return Jenkins credentials
-     */
-    public static <T extends Credentials> T getJenkinsCredentials(final String credentialsId, final Class<T> credentialsClass) {
-        if (StringUtils.isEmpty(credentialsId))
-            return null;
-        return CredentialsMatchers.firstOrNull(
-                CredentialsProvider.lookupCredentials(credentialsClass,
-                        Jenkins.getInstance(), ACL.SYSTEM, Collections.<DomainRequirement>emptyList()),
-                CredentialsMatchers.withId(credentialsId)
-        );
-    }
-
-    public static String setWorkcenterUrl(String itemUrl) {
-        return itemUrl.replace("/tmtrack/tmtrack.dll?", "/workcenter/tmtrack.dll?shell=swc&");
+    public void doTestConnection(StaplerRequest req, StaplerResponse rsp,
+                                 @QueryParameter("rlc.aeUrl") final String aeUrl,
+                                 @QueryParameter("rlc.oeUrl") final String oeUrl,
+                                 @QueryParameter("rlc.user") final String user,
+                                 @QueryParameter("rlc.password") final String password,
+                                 @QueryParameter("rlc.releaseTrainTableId") final Integer releaseTrainTableId,
+                                 @QueryParameter("rlc.releasePackageTableId") final Integer releasePackageTableId)
+            throws IOException, ServletException {
+        new FormFieldValidator(req, rsp, true) {
+            protected void check() throws IOException, ServletException {
+                try {
+                    RLCSite site = new RLCSite(null, aeUrl, oeUrl, user, password,
+                            releaseTrainTableId, releasePackageTableId);
+                    //site.verifyConnection();
+                    ok("Success");
+                } catch (Exception e) {
+                    error(e.getMessage());
+                }
+            }
+        }.process();
     }
 }

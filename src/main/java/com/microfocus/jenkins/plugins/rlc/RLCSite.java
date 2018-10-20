@@ -82,95 +82,153 @@
  * ===========================================================================
  */
 
-package com.microfocus.jenkins.plugins.rlc.utils;
+package com.microfocus.jenkins.plugins.rlc;
 
-import com.cloudbees.plugins.credentials.Credentials;
-import com.cloudbees.plugins.credentials.CredentialsMatchers;
-import com.cloudbees.plugins.credentials.CredentialsProvider;
-import com.cloudbees.plugins.credentials.common.UsernamePasswordCredentials;
-import com.cloudbees.plugins.credentials.domains.DomainRequirement;
-import hudson.security.ACL;
-import jenkins.model.Jenkins;
+import hudson.model.Descriptor;
 import org.apache.commons.lang.StringUtils;
-import org.jenkinsci.plugins.plaincredentials.StringCredentials;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.NodeList;
 
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.Collections;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import java.io.File;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
-public class RLCUtils {
+/**
+ * Representation of Release Control instance and defaults
+ *
+ * @author Kevin A. Lee
+ */
+public class RLCSite implements Serializable {
 
-    /**
-     * Remove the trailing slash from url.
-     *
-     * @param url the URL
-     * @return URL with the trailing slash removed, if it exists.
-     */
-    public static String rmSlashFromUrl(final String url) {
-        if (!StringUtils.isEmpty(url)) {
-            return url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
-        } else {
-            return url;
-        }
+    private static final long serialVersionUID = 1L;
+    private static final Logger LOGGER = Logger.getLogger(Descriptor.class.getName());
+    private String profileName;
+    private String aeUrl;
+    private String oeUrl;
+    private String user;
+    private String password;
+    private Integer releaseTrainTableId;
+    private Integer releasePackageTableId;
+
+    public RLCSite() {
     }
 
-    /**
-     * Check if a String is a valid URL
-     *
-     * @param url the URL
-     * @return true if a valid URL, else false
-     */
-    public static boolean isUrl(final String url) {
-        boolean valid = false;
-        if (url != null && url.length() > 0) {
-            try {
-                new URL(url);
-                valid = true;
-            } catch (MalformedURLException e) {
-                // malformed; ignore
+    public RLCSite(String profileName, String aeUrl, String oeUrl, String user, String password,
+                   Integer releaseTrainTableId, Integer releasePackageTableId) {
+        this.profileName = profileName;
+        this.aeUrl = aeUrl;
+        this.oeUrl = oeUrl;
+        this.user = user;
+        this.password = password;
+        this.releaseTrainTableId = releaseTrainTableId;
+        this.releasePackageTableId = releasePackageTableId;
+    }
+
+    public static List<RLCSite> readSitesFromConfigurationXml(File file) {
+        List<RLCSite> sites = new ArrayList<>();
+        try {
+            DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder builder = builderFactory.newDocumentBuilder();
+            Document document = builder.parse(file);
+            NodeList nodeList = document.getElementsByTagName(RLCSite.class.getName());
+            for (int i = 0; i < nodeList.getLength(); i++) {
+                Element element = (Element) nodeList.item(i);
+                String profileName = element.getElementsByTagName("profileName").item(0).getTextContent();
+                String aeUrl = element.getElementsByTagName("aeUrl").item(0).getTextContent();
+                String oeUrl = element.getElementsByTagName("oeUrl").item(0).getTextContent();
+                String user = element.getElementsByTagName("user").item(0).getTextContent();
+                String password = element.getElementsByTagName("password").item(0).getTextContent();
+                Integer releaseTrainTableId = Integer.valueOf(element.getElementsByTagName("releaseTrainTableId").item(0).getTextContent());
+                Integer releasePackageTableId = Integer.valueOf(element.getElementsByTagName("releasePackageTableId").item(0).getTextContent());
+                sites.add(new RLCSite(profileName, aeUrl, oeUrl, user, password, releaseTrainTableId, releasePackageTableId));
             }
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Failed to read configuration file: " + file.getName(), e);
         }
-        return valid;
+        return sites;
     }
 
-    /**
-     * Get the token from the credentials identified by the given id.
-     *
-     * @param credentialsId The id for the credentials
-     * @return Jenkins credentials
-     */
-    public static StringCredentials getTokenCredentials(final String credentialsId) {
-        return getJenkinsCredentials(credentialsId, StringCredentials.class);
+    public String getDisplayName() {
+        if (StringUtils.isEmpty(profileName)) {
+            return aeUrl;
+        } else {
+            return profileName;
+        }
     }
 
-    /**
-     * Get the user/pass from the credentials identified by the given id.
-     *
-     * @param credentialsId The id for the credentials
-     * @return Jenkins credentials
-     */
-    public static UsernamePasswordCredentials getUsernamePasswordCredentials(final String credentialsId) {
-        return getJenkinsCredentials(credentialsId, UsernamePasswordCredentials.class);
+    public String getProfileName() {
+        return profileName;
     }
 
-    /**
-     * Get the credentials identified by the given id from the Jenkins credential store.
-     *
-     * @param credentialsId    The id for the credentials
-     * @param credentialsClass The class of credentials to return
-     * @return Jenkins credentials
-     */
-    public static <T extends Credentials> T getJenkinsCredentials(final String credentialsId, final Class<T> credentialsClass) {
-        if (StringUtils.isEmpty(credentialsId))
-            return null;
-        return CredentialsMatchers.firstOrNull(
-                CredentialsProvider.lookupCredentials(credentialsClass,
-                        Jenkins.getInstance(), ACL.SYSTEM, Collections.<DomainRequirement>emptyList()),
-                CredentialsMatchers.withId(credentialsId)
-        );
+    public void setProfileName(String profileName) {
+        this.profileName = profileName;
     }
 
-    public static String setWorkcenterUrl(String itemUrl) {
-        return itemUrl.replace("/tmtrack/tmtrack.dll?", "/workcenter/tmtrack.dll?shell=swc&");
+    public String getAeUrl() {
+        return aeUrl;
+    }
+
+    public void setAeUrl(String aeUrl) {
+        this.aeUrl = aeUrl;
+        if (this.aeUrl != null) {
+            this.aeUrl = this.aeUrl.replaceAll("\\\\", "/");
+        }
+        while (this.aeUrl != null && this.aeUrl.endsWith("/")) {
+            this.aeUrl = this.aeUrl.substring(0, this.aeUrl.length() - 1);
+        }
+    }
+
+    public String getOeUrl() {
+        return oeUrl;
+    }
+
+    public void setOeUrl(String oeUrl) {
+        this.oeUrl = oeUrl;
+        if (this.oeUrl != null) {
+            this.oeUrl = this.oeUrl.replaceAll("\\\\", "/");
+        }
+        while (this.oeUrl != null && this.oeUrl.endsWith("/")) {
+            this.oeUrl = this.oeUrl.substring(0, this.oeUrl.length() - 1);
+        }
+    }
+
+    public String getUser() {
+        return user;
+    }
+
+    public void setUser(String user) {
+        this.user = user;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public Integer getReleaseTrainTableId() {
+        return releaseTrainTableId;
+    }
+
+    public void setReleaseTrainTableId(Integer releaseTrainTableId) {
+        this.releaseTrainTableId = releaseTrainTableId;
+
+    }
+
+    public Integer getReleasePackageTableId() {
+        return releasePackageTableId;
+    }
+
+    public void setReleasePackageTableId(Integer releasePackageTableId) {
+        this.releasePackageTableId = releasePackageTableId;
+
     }
 }

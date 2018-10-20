@@ -1,5 +1,5 @@
 /* ===========================================================================
- *  Copyright (c) 2017 Micro Focus. All rights reserved.
+ *  Copyright (c) 2018 Micro Focus. All rights reserved.
  *
  *  Use of the Sample Code provided by Micro Focus is governed by the following
  *  terms and conditions. By using the Sample Code, you agree to be bound by
@@ -84,31 +84,37 @@
 
 package com.microfocus.jenkins.plugins.rlc;
 
-import com.cloudbees.plugins.credentials.common.UsernamePasswordCredentials;
 import com.microfocus.jenkins.plugins.rlc.client.RLCClient;
-import com.microfocus.jenkins.plugins.rlc.model.RLCStep;
 import com.microfocus.jenkins.plugins.rlc.utils.RLCUtils;
-import hudson.*;
+import hudson.AbortException;
+import hudson.Extension;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.util.FormValidation;
+import hudson.util.Secret;
 import org.apache.commons.lang.StringUtils;
 import org.codehaus.jettison.json.JSONObject;
 import org.jenkinsci.Symbol;
+import org.jenkinsci.plugins.workflow.steps.StepContext;
+import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
-import org.kohsuke.stapler.QueryParameter;
 
+import javax.annotation.Nonnull;
 import javax.ws.rs.core.UriBuilder;
-import java.io.IOException;
 import java.net.URI;
+import java.util.Collections;
+import java.util.Set;
 
 /**
- * Create a new Release Package in Micro FOcus Release Control (via SBM)
+ * Step to create a new Release Package in Micro Focus Release Control
  *
  * @author Kevin A. Lee
  */
-public class CreateReleasePackageStep extends RLCStep {
+public class CreateReleasePackageStep extends AbstractRLCStep {
+
+    @Extension
+    public static final CreateReleasePackageDescriptor DESCRIPTOR = new CreateReleasePackageDescriptor();
 
     private String projectName;
     private String title;
@@ -119,9 +125,9 @@ public class CreateReleasePackageStep extends RLCStep {
     private Integer releaseTrainId;
     private String messageLog;
 
-    @DataBoundSetter
-    public void setProjectName(final String projectName) {
-        this.projectName = projectName;
+    @DataBoundConstructor
+    public CreateReleasePackageStep(String siteName) {
+        super(siteName);
     }
 
     public String getProjectName() {
@@ -129,8 +135,8 @@ public class CreateReleasePackageStep extends RLCStep {
     }
 
     @DataBoundSetter
-    public void setTitle(final String title) {
-        this.title = title;
+    public void setProjectName(final String projectName) {
+        this.projectName = projectName;
     }
 
     public String getTitle() {
@@ -138,8 +144,8 @@ public class CreateReleasePackageStep extends RLCStep {
     }
 
     @DataBoundSetter
-    public void setDescription(final String description) {
-        this.description = description;
+    public void setTitle(final String title) {
+        this.title = title;
     }
 
     public String getDescription() {
@@ -147,8 +153,8 @@ public class CreateReleasePackageStep extends RLCStep {
     }
 
     @DataBoundSetter
-    public void setReleaseTypeId(final Integer releaseTypeId) {
-        this.releaseTypeId = releaseTypeId;
+    public void setDescription(final String description) {
+        this.description = description;
     }
 
     public Integer getReleaseTypeId() {
@@ -156,12 +162,21 @@ public class CreateReleasePackageStep extends RLCStep {
     }
 
     @DataBoundSetter
-    public void setDeploymentPathId(final Integer deploymentPathId) {
-        this.deploymentPathId = deploymentPathId;
+    public void setReleaseTypeId(final Integer releaseTypeId) {
+        this.releaseTypeId = releaseTypeId;
     }
 
     public Integer getDeploymentPathId() {
         return this.deploymentPathId;
+    }
+
+    @DataBoundSetter
+    public void setDeploymentPathId(final Integer deploymentPathId) {
+        this.deploymentPathId = deploymentPathId;
+    }
+
+    public Integer getApplicationId() {
+        return this.applicationId;
     }
 
     @DataBoundSetter
@@ -178,8 +193,8 @@ public class CreateReleasePackageStep extends RLCStep {
         this.releaseTrainId = releaseTrainId;
     }
 
-    public Integer getApplicationId() {
-        return this.applicationId;
+    public String getMessageLog() {
+        return this.messageLog;
     }
 
     @DataBoundSetter
@@ -187,14 +202,9 @@ public class CreateReleasePackageStep extends RLCStep {
         this.messageLog = messageLog;
     }
 
-    public String getMessageLog() {
-        return this.messageLog;
-    }
-
-    @DataBoundConstructor
-    public CreateReleasePackageStep(final String aeUrl, final String oeUrl) {
-        this.setAeUrl(RLCUtils.rmSlashFromUrl(aeUrl));
-        this.setOeUrl(RLCUtils.rmSlashFromUrl(oeUrl));
+    @Override
+    public StepExecution start(StepContext context) {
+        return new Execution(context, this);
     }
 
     /**
@@ -208,7 +218,7 @@ public class CreateReleasePackageStep extends RLCStep {
      */
     @Symbol("rlcCreateReleasePackage")
     @Extension
-    public static class DescriptorImpl extends RLCDescriptorImpl {
+    public static class CreateReleasePackageDescriptor extends AbstractRLCDescriptorImpl {
 
         private FormValidation verifyProjectName(final String projectName) {
             if (StringUtils.isEmpty(projectName))
@@ -241,88 +251,118 @@ public class CreateReleasePackageStep extends RLCStep {
         }
 
         // TODO: more validation of contents
-        public FormValidation doCheckEventType(@QueryParameter final String value) {
-            return FormValidation.ok();
-        }
 
         @Override
         public String getDisplayName() {
-            return "Micro Focus RLC Create Release";
-        }
-   }
-
-    @Override
-    public void perform(Run<?,?> run, FilePath workspace, Launcher launcher, TaskListener listener)
-        throws InterruptedException, IOException {
-
-        this.setLogger(listener.getLogger());
-
-        //JenkinsEnvironment jenkinsEnvironment = new JenkinsEnvironment();
-        //EnvVars envVars = run.getEnvironment(listener);
-        //log(envVars.toString());
-
-        //listener.hyperlink("http://localhost:8080", "http://localhost:8080");
-
-        String resolvedProjectName = run.getEnvironment(listener).expand(getProjectName());
-        String resolvedTitle = run.getEnvironment(listener).expand(getTitle());
-        String resolvedDescription = run.getEnvironment(listener).expand(getDescription());
-        String resolvedMessageLog = run.getEnvironment(listener).expand(getMessageLog());
-
-        final UsernamePasswordCredentials usernamePasswordCredentials = RLCUtils.getUsernamePasswordCredentials(getCredentialsId());
-        if (usernamePasswordCredentials == null) {
-            throw new AbortException("Micro Focus RLC account credentials are not filled in.");
+            return "Micro Focus RLC Create Release Package";
         }
 
-        // check connection to Micro Focus DA
-        RLCClient rlcClient = new RLCClient(
-                this.getAeUrl(),
-                this.getOeUrl(),
-                usernamePasswordCredentials.getUsername(),
-                usernamePasswordCredentials.getPassword());
-        try {
-            rlcClient.verifyConnection();
-        } catch (Exception ex) {
-            throw new AbortException("Unable to connect to Micro Focus Release Control: " + ex.toString());
+        @Override
+        public String getFunctionName() {
+            return "rlcCreateReleasePackage";
         }
 
-        try {
-            log("Creating new release: " + title);;
-            UriBuilder uriBuilder = UriBuilder.fromPath(getAeUrl()).path("jsonapi").path("submittoproject").path(resolvedProjectName);
-            URI uri = uriBuilder.build();
-            log("Submitting to: " + uri.toString());
+        @Override
+        public Set<? extends Class<?>> getRequiredContext() {
+            return Collections.singleton(Run.class);
+        }
+    }
 
-            //{"transition":
-            // {"TITLE":"Release of App 1","RLM_RELEASE_TYPE":2,
-            // "DESCRIPTION":"Release of App 1 Description",
-            // "RLM_DEPLOYMENT_PATH":1,
-            // "RLM_MESSAGE_LOG":"some more comments",
-            // "RLM_RELEASE_TRAIN":1,
-            // "RLM_APPLICATION": 1},
-            // "fixedFields": false, "fields": [ {"dbname":"ISSUEID"}]}
-            String postBody = "{\"transition\": {" +
-                    "\"TITLE\":\"" + resolvedTitle + "\"," +
-                    "\"RLM_RELEASE_TYPE\":" + releaseTypeId.toString() + "," +
-                    "\"RLM_DEPLOYMENT_PATH\":" + deploymentPathId.toString() + "," +
-                    (applicationId == null || applicationId == 0 ? "" : "\"RLM_APPLICATION\":" + applicationId.toString() + ",") +
-                    (releaseTrainId == null || releaseTrainId == 0 ? "" : "\"RLM_RELEASE_TRAIN\":" + releaseTrainId.toString() + ",") +
-                    (resolvedMessageLog.equalsIgnoreCase("") ? "" : "\"RLM_MESSAGE\":\"" + resolvedMessageLog + "\",") +
-                    "\"DESCRIPTION\":\"" + resolvedDescription + "\"" +
-                "}," +
-                "\"fixedFields\": false, \"fields\": [ {\"dbname\":\"ISSUEID\"}]}";
-            //log(postBody);
-            String jsonOut = rlcClient.executeJSONPost(uri, postBody);
-            JSONObject itemObj = new JSONObject(jsonOut).optJSONObject("item");
-            if (itemObj != null) {
-                JSONObject idObj = itemObj.getJSONObject("id");
-                String itemId = (String) idObj.get("itemId");
-                String itemUrl = (String) idObj.get("url");
-                log("Created new release package item with id: " + itemId);
-                log("See: " + itemUrl + "?shell=swc");
+    public static final class Execution extends AbstractItemProviderExecution<String> {
+
+        private static final long serialVersionUID = 1L;
+        private transient CreateReleasePackageStep step;
+
+        Execution(@Nonnull StepContext context, @Nonnull CreateReleasePackageStep step) {
+            super(context);
+            this.step = step;
+        }
+
+        @Override
+        protected String run() throws Exception {
+
+            TaskListener listener = this.getContext().get(TaskListener.class);
+
+            // set listener in Abstract class for logging
+            step.setListener(listener);
+
+            String siteName = step.getSiteName();
+            RLCSite site = DESCRIPTOR.getSiteByName(siteName);
+
+            String resolvedProjectName = this.getEnvironment(listener).expand(step.getProjectName());
+            String resolvedTitle = this.getEnvironment(listener).expand(step.getTitle());
+            String resolvedDescription = this.getEnvironment(listener).expand(step.getDescription());
+            String resolvedMessageLog = this.getEnvironment(listener).expand(step.getMessageLog());
+
+            // check connection to Micro Focus DA
+            RLCClient rlcClient = new RLCClient(
+                    site.getAeUrl(),
+                    site.getOeUrl(),
+                    site.getUser(),
+                    Secret.fromString(site.getPassword()));
+            try {
+                rlcClient.verifyConnection();
+            } catch (Exception ex) {
+                throw new AbortException("Unable to connect to Micro Focus Release Control: " + ex.toString());
             }
-        } catch (Exception ex) {
-            throw new AbortException("Unable to Create Release: " + ex.toString());
-        }
 
+            String itemId = "";
+            String itemUrl = "";
+            Integer recordId = 0;
+            try {
+                step.log("Creating new Release Package \" " + resolvedTitle + "\"");
+
+                UriBuilder uriBuilder = UriBuilder.fromPath(site.getAeUrl()).path("jsonapi").path("submittoproject").path(resolvedProjectName);
+                URI uri = uriBuilder.build();
+                step.log("Submitting to: " + uri.toString());
+
+                //{"transition":
+                // {"TITLE":"Release of App 1",
+                // "RLM_RELEASE_TYPE":2,
+                // "DESCRIPTION":"Release of App 1 Description",
+                // "RLM_DEPLOYMENT_PATH":1,
+                // "RLM_MESSAGE_LOG":"some more comments",
+                // "RLM_RELEASE_TRAIN":1,
+                // "RLM_APPLICATION": 1},
+                // "fixedFields": false, "fields": [ {"dbname":"ISSUEID"}]}
+
+                //{"transition":
+                // {"TITLE":"Release 27",
+                // "RLM_RELEASE_TYPE":1,
+                // "RLM_DEPLOYMENT_PATH":1,
+                // "RLM_APPLICATION":1,
+                // "RLM_RELEASE_TRAIN":2,
+                // "DESCRIPTION":"Release of 27"},
+                // "fixedFields": false, "fields": [ {"dbname":"ISSUEID"}]}
+                String postBody = "{\"transition\": {" +
+                        "\"TITLE\":\"" + resolvedTitle + "\"," +
+                        "\"RLM_RELEASE_TYPE\":" + step.getReleaseTypeId().toString() + "," +
+                        "\"RLM_DEPLOYMENT_PATH\":" + step.getDeploymentPathId().toString() + "," +
+                        (step.getApplicationId() == null || step.getApplicationId() == 0 ? "" : "\"RLM_APPLICATION\":" + step.getApplicationId().toString() + ",") +
+                        (step.getReleaseTrainId() == null || step.getReleaseTrainId() == 0 ? "" : "\"RLM_RELEASE_TRAIN\":" + step.getReleaseTrainId().toString() + ",") +
+                        (resolvedMessageLog.equalsIgnoreCase("") ? "" : "\"RLM_MESSAGE_LOG\":\"" + resolvedMessageLog + "\",") +
+                        "\"DESCRIPTION\":\"" + resolvedDescription + "\"" +
+                        "}," +
+                        "\"fixedFields\": false, \"fields\": [ {\"dbname\":\"ISSUEID\"}]}";
+                //step.log(postBody);
+                String jsonOut = rlcClient.executeJSONPost(uri, postBody);
+                JSONObject itemObj = new JSONObject(jsonOut).optJSONObject("item");
+                if (itemObj != null) {
+                    JSONObject idObj = itemObj.getJSONObject("id");
+                    recordId = (Integer) idObj.get("id");
+                    itemId = (String) idObj.get("itemId");
+                    itemUrl = (String) idObj.get("url");
+                    step.log("Created new Release Package " + itemId + " with record id: " + recordId);
+                    step.log("See: " + RLCUtils.setWorkcenterUrl(itemUrl));
+                } else {
+                    step.log("Unable to Create Release Package: " + jsonOut);
+                }
+            } catch (Exception ex) {
+                throw new AbortException("Unable to Create Release Package: " + ex.toString());
+            }
+
+            return recordId.toString();
+        }
     }
 }
 

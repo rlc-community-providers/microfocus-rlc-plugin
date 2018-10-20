@@ -1,7 +1,5 @@
-package com.microfocus.jenkins.plugins.rlc.client;
-
 /* ===========================================================================
- *  Copyright (c) 2017 Micro Focus. All rights reserved.
+ *  Copyright (c) 2018 Micro Focus. All rights reserved.
  *
  *  Use of the Sample Code provided by Micro Focus is governed by the following
  *  terms and conditions. By using the Sample Code, you agree to be bound by
@@ -49,7 +47,7 @@ package com.microfocus.jenkins.plugins.rlc.client;
  *  harmless Micro Focus from and against any and all liability, loss or claim
  *  arising from this agreement or from (i) your license of, use of or
  *  reliance upon the Sample Code or any related documentation or materials,
- *  or (ii) your development, use or reliance upon any application or
+ *  or (ii) your development, use or reliance upon any eventId or
  *  derivative work created from the Sample Code.
  *
  *  5.  TERMINATION OF THE LICENSE.  This agreement and the underlying
@@ -84,6 +82,8 @@ package com.microfocus.jenkins.plugins.rlc.client;
  * ===========================================================================
  */
 
+package com.microfocus.jenkins.plugins.rlc.client;
+
 import com.microfocus.jenkins.plugins.rlc.exceptions.AuthenticationException;
 import com.microfocus.jenkins.plugins.rlc.model.ALFEvent;
 import com.urbancode.commons.util.https.OpenSSLProtocolSocketFactory;
@@ -98,19 +98,13 @@ import org.apache.commons.httpclient.methods.PutMethod;
 import org.apache.commons.httpclient.params.HttpClientParams;
 import org.apache.commons.httpclient.protocol.Protocol;
 import org.apache.commons.httpclient.protocol.ProtocolSocketFactory;
-import org.apache.commons.lang.StringUtils;
-import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONObject;
 
 import javax.ws.rs.core.UriBuilder;
 import javax.xml.namespace.QName;
 import javax.xml.soap.*;
-import java.io.IOException;
-import java.io.OutputStream;
 import java.io.Serializable;
-import java.lang.reflect.Field;
 import java.net.URI;
-import java.util.UUID;
 
 /**
  * Provides a generic client and access methods for Micro Focus Deployment Automation
@@ -121,12 +115,15 @@ public class RLCClient implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    public static enum PROCESS_TYPE { applicationProcess, componentProcess, genericProcess }
+    /**
+     * The Application Engine URL.
+     */
+    private String aeUrl;
 
     /**
-     * The url.
+     * The Orchestration Engine url.
      */
-    private String url;
+    private String oeUrl;
 
     /**
      * The username.
@@ -145,224 +142,16 @@ public class RLCClient implements Serializable {
     /**
      * Instantiates a new Micro Focus RLC Client.
      *
-     * @param url         the url of the RLC instance
-     * @param user        the username
-     * @param password    the password
+     * @param aeUrl    the Application Engine URL of the RLC instance
+     * @param oeUrl    the Orchestration Engine URL of the RLC instance
+     * @param user     the username
+     * @param password the password
      */
-    public RLCClient(String url, String user, Secret password) {
-        this.url = url;
+    public RLCClient(String aeUrl, String oeUrl, String user, Secret password) {
+        this.aeUrl = aeUrl;
+        this.oeUrl = oeUrl;
         this.user = user;
         this.password = password;
-    }
-
-    /**
-     * Gets the url.
-     *
-     * @return the url
-     */
-    public String getUrl() {
-        return url;
-    }
-
-    /**
-     * Sets the url.
-     *
-     * @param url the new url
-     */
-    public void setUrl(String url) {
-        this.url = url;
-        if (this.url != null) {
-            this.url = this.url.replaceAll("\\\\", "/");
-        }
-        while (this.url != null && this.url.endsWith("/")) {
-            this.url = this.url.substring(0, this.url.length() - 1);
-        }
-    }
-
-    /**
-     * Gets the username.
-     *
-     * @return the username
-     */
-    public String getUser() {
-        return user;
-    }
-
-    /**
-     * Sets the username.
-     *
-     * @param user the new username
-     */
-    public void setUser(String user) {
-        this.user = user;
-    }
-
-    /**
-     * Gets the password.
-     *
-     * @return the password
-     */
-    public Secret getPassword() {
-        return password;
-    }
-
-    /**
-     * Sets the password.
-     *
-     * @param password the new password
-     */
-    public void setPassword(Secret password) {
-        this.password = password;
-    }
-
-    public void verifyConnection() throws Exception {
-        // TODO:
-    }
-
-
-    //
-    // generic HTTP REST get,post,put methods
-    //
-
-    public String executeJSONGet(URI uri) throws Exception {
-        String result = null;
-        HttpClient httpClient = new HttpClient();
-
-        if ("https".equalsIgnoreCase(uri.getScheme())) {
-            ProtocolSocketFactory socketFactory = new OpenSSLProtocolSocketFactory();
-            Protocol https = new Protocol("https", socketFactory, 443);
-            Protocol.registerProtocol("https", https);
-        }
-
-        GetMethod method = new GetMethod(uri.toString());
-        setDirectSsoInteractionHeader(method);
-        try {
-            HttpClientParams params = httpClient.getParams();
-            params.setAuthenticationPreemptive(true);
-
-            UsernamePasswordCredentials clientCredentials = new UsernamePasswordCredentials(user, password.getPlainText());
-            httpClient.getState().setCredentials(AuthScope.ANY, clientCredentials);
-
-            int responseCode = httpClient.executeMethod(method);
-            //if (responseCode < 200 || responseCode < 300) {
-            if (responseCode == 401) {
-                throw new AuthenticationException("Error connecting to Micro Focus RLC: Invalid user and/or password");
-            } else if (responseCode != 200) {
-                throw new Exception("Error connecting to Micro Focus RLC: " + responseCode);
-            } else {
-                result = method.getResponseBodyAsString();
-            }
-        } finally {
-            method.releaseConnection();
-        }
-
-        return result;
-    }
-
-    public String executeJSONPut(URI uri, String putContents) throws Exception {
-        String result = null;
-        HttpClient httpClient = new HttpClient();
-
-        if ("https".equalsIgnoreCase(uri.getScheme())) {
-            ProtocolSocketFactory socketFactory = new OpenSSLProtocolSocketFactory();
-            Protocol https = new Protocol("https", socketFactory, 443);
-            Protocol.registerProtocol("https", https);
-        }
-
-        PutMethod method = new PutMethod(uri.toString());
-        setDirectSsoInteractionHeader(method);
-        if (putContents != null)
-            method.setRequestBody(putContents);
-        method.setRequestHeader("Content-Type", "application/json");
-        method.setRequestHeader("charset", "utf-8");
-        try {
-            HttpClientParams params = httpClient.getParams();
-            params.setAuthenticationPreemptive(true);
-
-            UsernamePasswordCredentials clientCredentials = new UsernamePasswordCredentials(user, password.getPlainText());
-            httpClient.getState().setCredentials(AuthScope.ANY, clientCredentials);
-
-            int responseCode = httpClient.executeMethod(method);
-
-            //if (responseCode < 200 || responseCode < 300) {
-            if (responseCode == 401) {
-                throw new AuthenticationException("Error connecting to Micro Focus RLC: Invalid user and/or password");
-            } else if (responseCode != 200 && responseCode != 204) {
-                throw new Exception("Micro Focus RLC returned error code: " + responseCode);
-            } else {
-                result = method.getResponseBodyAsString();
-            }
-        } catch (Exception ex) {
-            throw new Exception("Error connecting to Micro Focus RLC: " + ex.getMessage());
-        } finally {
-            method.releaseConnection();
-        }
-
-        return result;
-    }
-
-    public String executeJSONPost(URI uri, String postContents) throws Exception {
-        String result = null;
-        HttpClient httpClient = new HttpClient();
-
-        if ("https".equalsIgnoreCase(uri.getScheme())) {
-            ProtocolSocketFactory socketFactory = new OpenSSLProtocolSocketFactory();
-            Protocol https = new Protocol("https", socketFactory, 443);
-            Protocol.registerProtocol("https", https);
-        }
-
-        PostMethod method = new PostMethod(uri.toString());
-        setDirectSsoInteractionHeader(method);
-        if (postContents != null)
-            method.setRequestBody(postContents);
-        method.setRequestHeader("Content-Type", "application/json");
-        method.setRequestHeader("charset", "utf-8");
-        try {
-            HttpClientParams params = httpClient.getParams();
-            params.setAuthenticationPreemptive(true);
-
-            UsernamePasswordCredentials clientCredentials = new UsernamePasswordCredentials(user, password.getPlainText());
-            httpClient.getState().setCredentials(AuthScope.ANY, clientCredentials);
-
-            int responseCode = httpClient.executeMethod(method);
-
-            if (responseCode == 401) {
-                throw new AuthenticationException("Error connecting to Micro Focus RLC: Invalid user and/or password");
-            } else if (responseCode != 200) {
-                throw new Exception("Micro Focus RLC returned error code: " + responseCode);
-            } else {
-                result = method.getResponseBodyAsString();
-            }
-        } catch (Exception e) {
-            throw new Exception("Error connecting to Micro Focus RLC: " + e.getMessage());
-        } finally {
-            method.releaseConnection();
-        }
-
-        return result;
-    }
-
-    public void generateALFEvent(ALFEvent alfEvent) {
-
-        String soapEndpointUrl = getUrl() + "/eventmanager/services/ALFEventManagerDocLit";
-
-        try {
-            // Create SOAP Connection
-            SOAPConnectionFactory soapConnectionFactory = SOAPConnectionFactory.newInstance();
-            SOAPConnection soapConnection = soapConnectionFactory.createConnection();
-
-            SOAPMessage soapResponse = soapConnection.call(createSOAPRequest(alfEvent), soapEndpointUrl);
-
-            // Print the SOAP Response
-            System.out.println("Response SOAP Message:");
-            soapResponse.writeTo(System.out);
-            System.out.println();
-
-            soapConnection.close();
-        } catch (Exception e) {
-            System.err.println("\nError occurred while sending SOAP Request to Server!\nMake sure you have the correct endpoint URL and SOAPAction!\n");
-            e.printStackTrace();
-        }
     }
 
     private static SOAPMessage createSOAPRequest(ALFEvent alfEvent) throws Exception {
@@ -452,9 +241,291 @@ public class RLCClient implements Serializable {
         return soapMessage;
     }
 
+    /**
+     * Gets the Application Engine URL.
+     *
+     * @return the aeUrl
+     */
+    public String getAeUrl() {
+        return aeUrl;
+    }
+
+    /**
+     * Sets the Application Enginer url.
+     *
+     * @param url the url
+     */
+    public void setAeUrl(String url) {
+        this.aeUrl = url;
+        if (this.aeUrl != null) {
+            this.aeUrl = this.aeUrl.replaceAll("\\\\", "/");
+        }
+        while (this.aeUrl != null && this.aeUrl.endsWith("/")) {
+            this.aeUrl = this.aeUrl.substring(0, this.aeUrl.length() - 1);
+        }
+    }
+
+    /**
+     * Gets the Orchestration Engine URL.
+     *
+     * @return the oeUrl
+     */
+    public String getOeUrl() {
+        return oeUrl;
+    }
+
+    /**
+     * Sets the Orchesration Engine url.
+     *
+     * @param url the url
+     */
+    public void setOeUrl(String url) {
+        this.oeUrl = url;
+        if (this.oeUrl != null) {
+            this.oeUrl = this.oeUrl.replaceAll("\\\\", "/");
+        }
+        while (this.oeUrl != null && this.oeUrl.endsWith("/")) {
+            this.oeUrl = this.oeUrl.substring(0, this.oeUrl.length() - 1);
+        }
+    }
+
+    /**
+     * Gets the username.
+     *
+     * @return the username
+     */
+    public String getUser() {
+        return user;
+    }
+
+    /**
+     * Sets the username.
+     *
+     * @param user the new username
+     */
+    public void setUser(String user) {
+        this.user = user;
+    }
+
+    /**
+     * Gets the password.
+     *
+     * @return the password
+     */
+    public Secret getPassword() {
+        return password;
+    }
+
+    /**
+     * Sets the password.
+     *
+     * @param password the new password
+     */
+    public void setPassword(Secret password) {
+        this.password = password;
+    }
+
+    //
+    // generic HTTP REST get,post,put methods
+    //
+
+    public void verifyConnection() throws AuthenticationException, Exception {
+        // just see if we can get SSO Token for now
+        this.getSSOToken();
+    }
+
+    public String executeJSONGet(URI uri) throws Exception {
+        String result = null;
+        HttpClient httpClient = new HttpClient();
+
+        if ("https".equalsIgnoreCase(uri.getScheme())) {
+            ProtocolSocketFactory socketFactory = new OpenSSLProtocolSocketFactory();
+            Protocol https = new Protocol("https", socketFactory, 443);
+            Protocol.registerProtocol("https", https);
+        }
+
+        GetMethod method = new GetMethod(uri.toString());
+        setDirectSsoInteractionHeader(method);
+        method.setRequestHeader("Content-Type", "application/json");
+        method.setRequestHeader("charset", "utf-8");
+        method.setRequestHeader("ALFSSOAuthNToken", getSSOToken());
+        try {
+            HttpClientParams params = httpClient.getParams();
+            params.setAuthenticationPreemptive(true);
+
+            UsernamePasswordCredentials clientCredentials = new UsernamePasswordCredentials(user, password.getPlainText());
+            httpClient.getState().setCredentials(AuthScope.ANY, clientCredentials);
+
+            int responseCode = httpClient.executeMethod(method);
+            //if (responseCode < 200 || responseCode < 300) {
+            if (responseCode == 401) {
+                throw new AuthenticationException("Error connecting to Micro Focus RLC: Invalid user and/or password");
+            } else if (responseCode != 200) {
+                throw new Exception("Error connecting to Micro Focus RLC: " + responseCode);
+            } else {
+                result = method.getResponseBodyAsString();
+            }
+        } finally {
+            method.releaseConnection();
+        }
+
+        return result;
+    }
+
+    public String executeJSONPut(URI uri, String putContents) throws Exception {
+        String result = null;
+        HttpClient httpClient = new HttpClient();
+
+        if ("https".equalsIgnoreCase(uri.getScheme())) {
+            ProtocolSocketFactory socketFactory = new OpenSSLProtocolSocketFactory();
+            Protocol https = new Protocol("https", socketFactory, 443);
+            Protocol.registerProtocol("https", https);
+        }
+
+        PutMethod method = new PutMethod(uri.toString());
+        setDirectSsoInteractionHeader(method);
+        if (putContents != null)
+            method.setRequestBody(putContents);
+        method.setRequestHeader("Content-Type", "application/json");
+        method.setRequestHeader("charset", "utf-8");
+        method.setRequestHeader("ALFSSOAuthNToken", getSSOToken());
+
+        try {
+            HttpClientParams params = httpClient.getParams();
+            params.setAuthenticationPreemptive(true);
+
+            UsernamePasswordCredentials clientCredentials = new UsernamePasswordCredentials(user, password.getPlainText());
+            httpClient.getState().setCredentials(AuthScope.ANY, clientCredentials);
+
+            int responseCode = httpClient.executeMethod(method);
+
+            //if (responseCode < 200 || responseCode < 300) {
+            if (responseCode == 401) {
+                throw new AuthenticationException("Error connecting to Micro Focus RLC: Invalid user and/or password");
+            } else if (responseCode != 200 && responseCode != 204) {
+                throw new Exception("Micro Focus RLC returned error code: " + responseCode);
+            } else {
+                result = method.getResponseBodyAsString();
+            }
+        } catch (Exception ex) {
+            throw new Exception("Error connecting to Micro Focus RLC: " + ex.getMessage());
+        } finally {
+            method.releaseConnection();
+        }
+
+        return result;
+    }
+
+    public String executeJSONPost(URI uri, String postContents) throws Exception {
+        System.out.println("in here");
+        String result = null;
+        HttpClient httpClient = new HttpClient();
+
+        if ("https".equalsIgnoreCase(uri.getScheme())) {
+            ProtocolSocketFactory socketFactory = new OpenSSLProtocolSocketFactory();
+            Protocol https = new Protocol("https", socketFactory, 443);
+            Protocol.registerProtocol("https", https);
+        }
+
+        PostMethod method = new PostMethod(uri.toString());
+        //setDirectSsoInteractionHeader(method);
+        System.out.println(postContents);
+        if (postContents != null)
+            method.setRequestBody(postContents);
+        method.setRequestHeader("Content-Type", "application/json");
+        method.setRequestHeader("charset", "utf-8");
+        String ssoToken = getSSOToken();
+        System.out.println(ssoToken);
+        method.setRequestHeader("ALFSSOAuthNToken", ssoToken);
+        try {
+            HttpClientParams params = httpClient.getParams();
+            //params.setAuthenticationPreemptive(true);
+
+            //UsernamePasswordCredentials clientCredentials = new UsernamePasswordCredentials(user, password.getPlainText());
+            //httpClient.getState().setCredentials(AuthScope.ANY, clientCredentials);
+
+            int responseCode = httpClient.executeMethod(method);
+            if (responseCode == 401) {
+                throw new AuthenticationException("Error connecting to Micro Focus RLC: Invalid user and/or password");
+            } else if (responseCode != 200) {
+                throw new Exception("Micro Focus RLC returned error code: " + responseCode);
+            } else {
+                result = method.getResponseBodyAsString();
+                System.out.println(result);
+            }
+        } catch (Exception e) {
+            throw new Exception("Error connecting to Micro Focus RLC: " + e.getMessage());
+        } finally {
+            method.releaseConnection();
+        }
+
+        return result;
+    }
+
     //
     // private methods
     //
+
+    public void generateALFEvent(ALFEvent alfEvent) {
+
+        String soapEndpointUrl = getOeUrl() + "/eventmanager/services/ALFEventManagerDocLit";
+
+        try {
+            // Create SOAP Connection
+            SOAPConnectionFactory soapConnectionFactory = SOAPConnectionFactory.newInstance();
+            SOAPConnection soapConnection = soapConnectionFactory.createConnection();
+
+            SOAPMessage soapResponse = soapConnection.call(createSOAPRequest(alfEvent), soapEndpointUrl);
+
+            // Print the SOAP Response
+            System.out.println("Response SOAP Message:");
+            soapResponse.writeTo(System.out);
+            System.out.println();
+
+            soapConnection.close();
+        } catch (Exception e) {
+            System.err.println("\nError occurred while sending SOAP Request to Server!\nMake sure you have the correct endpoint URL and SOAPAction!\n");
+            e.printStackTrace();
+        }
+    }
+
+    private String getSSOToken() throws AuthenticationException, Exception {
+        String token = null;
+        HttpClient httpClient = new HttpClient();
+        URI uri = UriBuilder.fromPath(getOeUrl()).path("idp").path("services").path("rest").path("tokenservice").build();
+        String jsonBody = "{   \"credentials\": {\"username\": \"" + user +
+                "\", \"password\": \"" + password + "\"} }";
+        if ("https".equalsIgnoreCase(uri.getScheme())) {
+            ProtocolSocketFactory socketFactory = new OpenSSLProtocolSocketFactory();
+            Protocol https = new Protocol("https", socketFactory, 443);
+            Protocol.registerProtocol("https", https);
+        }
+
+        PostMethod method = new PostMethod(uri.toString());
+        method.setRequestBody(jsonBody);
+        method.setRequestHeader("Content-Type", "application/json");
+        method.setRequestHeader("Accept", "application/json");
+        method.setRequestHeader("charset", "utf-8");
+        try {
+            HttpClientParams params = httpClient.getParams();
+            int responseCode = httpClient.executeMethod(method);
+
+            if (responseCode == 401) {
+                throw new AuthenticationException("Error connecting to Micro Focus RLC: Invalid user and/or password");
+            } else if (responseCode != 200) {
+                throw new Exception("Micro Focus RLC returned error code: " + responseCode);
+            } else {
+                JSONObject jsonObj = new JSONObject(method.getResponseBodyAsString());
+                JSONObject tokenObj = jsonObj.getJSONObject("token");
+                token = tokenObj.getString("value");
+            }
+        } catch (Exception e) {
+            throw new Exception("Error connecting to Micro Focus RLC: " + e.getMessage());
+        } finally {
+            method.releaseConnection();
+        }
+        return token;
+    }
 
     private String encodePath(String path) {
         String result;
