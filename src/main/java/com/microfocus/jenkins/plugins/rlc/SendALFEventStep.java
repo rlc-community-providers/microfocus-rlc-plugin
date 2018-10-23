@@ -176,7 +176,6 @@ public class SendALFEventStep extends AbstractRLCStep {
      * for the actual HTML fragment for the configuration screen.
      * </p>
      */
-    @Symbol("rlcSendALFEvent")
     @Extension
     public static class SendALFEventDescriptor extends AbstractRLCDescriptorImpl {
 

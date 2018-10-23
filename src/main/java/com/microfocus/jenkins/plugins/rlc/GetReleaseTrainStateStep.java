@@ -188,7 +188,6 @@ public class GetReleaseTrainStateStep extends AbstractRLCStep {
      * for the actual HTML fragment for the configuration screen.
      * </p>
      */
-    @Symbol("rlcGetReleaseTrainState")
     @Extension
     public static class GetReleaseTrainStateDescriptor extends AbstractRLCDescriptorImpl {
 

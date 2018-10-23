@@ -187,7 +187,6 @@ public class GetReleasePackageStateStep extends AbstractRLCStep {
      * for the actual HTML fragment for the configuration screen.
      * </p>
      */
-    @Symbol("rlcGetReleasePackageState")
     @Extension
     public static class GetReleasePackageStateDescriptor extends AbstractRLCDescriptorImpl {
 

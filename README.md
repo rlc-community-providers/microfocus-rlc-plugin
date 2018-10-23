@@ -17,25 +17,22 @@ Below is an example of some pipeline code that uses these steps.
 ```
 env.RLC_SITE_NAME = 'localhost - admin'
 env.RLC_RP_PROJECT_NAME = 'TRM_RLM_TURNOVERS.TURNOVERS'
-env.RLC_COMPONENT = "${JOB_BASE_NAME}"
-env.RLC_APPLICATION = 'Ring2Park Microservices'
-env.RLC_PROCESS = 'Deploy (Docker)'
 
 def rpId = rlcCreateReleasePackage applicationId: 1, deploymentPathId: 1, 
-    description: 'Release of ${BUILD_NUMBER}', messageLog: 'from ${JENKINS_URL}', 
-    projectName: '${RLC_RP_PROJECT_NAME}, releaseTrainId: 2, releaseTypeId: 1, 
-    siteName: '${RLC_SITE_NAME}', 
-    title: 'Release ${BUILD_NUMBER}'
+    description: "Release of ${BUILD_NUMBER}", messageLog: "from ${JENKINS_URL}", 
+    projectName: "${RLC_RP_PROJECT_NAME}", releaseTrainId: 2, releaseTypeId: 1, 
+    siteName: "${RLC_SITE_NAME}", 
+    title: "Release ${BUILD_NUMBER}"
 println rpId
 def packageState = rlcGetReleasePackageState delayInterval: 5000, desiredState: 'Completed', 
     maxRetries: -1, releasePackageId: ${rpId}, 
-    siteName: '${RLC_SITE_NAME}', waitForState: true
+    siteName: "${RLC_SITE_NAME}", waitForState: true
 println packageState
 def rtState = rlcGetReleaseTrainState delayInterval: 5000, desiredState: 'QA', maxRetries: -1, 
-    releaseTrainId: 1 siteName: '${RLC_SITE_NAME}', waitForState: true
+    releaseTrainId: 1 siteName: "${RLC_SITE_NAME}", waitForState: true
 println rtState
-rlcSendALFEvent eventId: '', eventType: 'Pending', objectId: '${BUILD_NUMBER}', 
-    objectType: 'Job', siteName: '${RLC_SITE_NAME}'
+rlcSendALFEvent eventId: '', eventType: 'Pending', objectId: "${BUILD_NUMBER}", 
+    objectType: 'Job', siteName: "${RLC_SITE_NAME}"
 ```
 ![Example Pipeline](https://github.com/jenkinsci/microfocus-RLC-plugin/images/jenkins-pipeline.png)
 
