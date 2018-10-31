@@ -94,7 +94,6 @@ import hudson.util.FormValidation;
 import hudson.util.Secret;
 import org.apache.commons.lang.StringUtils;
 import org.codehaus.jettison.json.JSONObject;
-import org.jenkinsci.Symbol;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;

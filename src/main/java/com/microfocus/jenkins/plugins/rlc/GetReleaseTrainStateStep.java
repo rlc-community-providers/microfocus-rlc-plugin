@@ -95,7 +95,6 @@ import hudson.util.FormValidation;
 import hudson.util.Secret;
 import org.apache.commons.lang.StringUtils;
 import org.codehaus.jettison.json.JSONObject;
-import org.jenkinsci.Symbol;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -237,7 +236,7 @@ public class GetReleaseTrainStateStep extends AbstractRLCStep {
             step.log("Retrieving state of Release Train [" + site.getReleaseTrainTableId() + ":"
                     + step.getReleaseTrainId() + "]");
             if (step.getWaitForState()) {
-                step.log("Waiting for desired state: " + step.getDesiredState());
+                step.log("Waiting for desired state to be in: " + step.getDesiredState());
             }
 
             // check connection to Micro Focus DA
@@ -276,7 +275,7 @@ public class GetReleaseTrainStateStep extends AbstractRLCStep {
                         titleVal = (String) titleObj.get("value");
 
                         if (step.getWaitForState()) {
-                            if (StringUtils.equalsIgnoreCase(stateVal, step.getDesiredState())) {
+                            if (StringUtils.containsIgnoreCase(step.getDesiredState(), stateVal)) {
                                 this.getContext().setResult(Result.SUCCESS);
                                 finished = true;
                             } else {

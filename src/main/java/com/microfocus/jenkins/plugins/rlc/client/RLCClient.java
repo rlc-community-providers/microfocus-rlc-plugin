@@ -107,7 +107,7 @@ import java.io.Serializable;
 import java.net.URI;
 
 /**
- * Provides a generic client and access methods for Micro Focus Deployment Automation
+ * Provides a generic client and access methods for Micro Focus Release Control (RLC)
  *
  * @author Kevin A. Lee
  */

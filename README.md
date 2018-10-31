@@ -24,21 +24,29 @@ def rpId = rlcCreateReleasePackage applicationId: 1, deploymentPathId: 1,
     siteName: "${RLC_SITE_NAME}", 
     title: "Release ${BUILD_NUMBER}"
 println rpId
-def packageState = rlcGetReleasePackageState delayInterval: 5000, desiredState: 'Completed', 
-    maxRetries: -1, releasePackageId: ${rpId}, 
-    siteName: "${RLC_SITE_NAME}", waitForState: true
+// or we can also qualify by class:
+def packageState = 'com.microfocus.jenkins.plugins.rlc.rlcGetReleasePackageState'(delayInterval: 5000, desiredState: 'Completed', 
+    maxRetries: -1, releasePackageId: "${rpId}", 
+    siteName: "${RLC_SITE_NAME}", waitForState: true)
 println packageState
-def rtState = rlcGetReleaseTrainState delayInterval: 5000, desiredState: 'QA', maxRetries: -1, 
-    releaseTrainId: 1 siteName: "${RLC_SITE_NAME}", waitForState: true
+def rtState = rlcGetReleaseTrainState delayInterval: 5000, desiredState: 'Development,QA', maxRetries: -1, 
+    releaseTrainId: 1, siteName: "${RLC_SITE_NAME}", waitForState: true
 println rtState
 rlcSendALFEvent eventId: '', eventType: 'Pending', objectId: "${BUILD_NUMBER}", 
     objectType: 'Job', siteName: "${RLC_SITE_NAME}"
 ```
-![Example Pipeline](https://github.com/jenkinsci/microfocus-RLC-plugin/images/jenkins-pipeline.png)
+![Example Pipeline](https://raw.githubusercontent.com/rlc-community-providers/microfocus-rlc-plugin/master/images/jenkins-pipeline.png)
 
 ## Build/Usage Instructions
 
 * Clone the repository from github.
+
+* Install (Micro Focus) dependencies into your local repository:
+
+```
+mvn install:install-file -DgroupId=com.urbancode -DartifactId=codestation2-client-all -Dversion=1.1 -Dpackaging=jar -Dfile=lib/codestation2-client-all-1.1.jar -DgeneratePom=true
+mvn install:install-file -DgroupId=com.serena -DartifactId=commons-util -Dversion=CURRENT -Dpackaging=jar -Dfile=lib/commons-util-CURRENT.jar -DgeneratePom=true
+```
 
 * Run the plugin in test Jenkins instance:
 
@@ -53,6 +61,10 @@ mvn hpi:run -Djetty.port=8090
 Note: you will have to install the [Jenkins Pipeline](https://wiki.jenkins-ci.org/display/JENKINS/Pipeline+Plugin) plugins to be able to create pipelines.
 
 ##Release Notes
+
+#####0.1.1
+
+ - Allowed checking for multiple States in `rlcGetReleasePackageState` and `rlcGetReleaseTrainState`
 
 #####0.1-SNAPSHOT
 *The plugin has not yet been completed or validated and so is not yet available for installation directly from the Jenkins
