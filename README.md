@@ -42,11 +42,11 @@ def rpState = 'com.microfocus.jenkins.plugins.rlc.GetReleasePackageStateStep'(
    )
 println rpState   
 ```
-![Example Pipeline](https://raw.githubusercontent.com/rlc-community-providers/microfocus-rlc-plugin/master/doc/pipeline.txt)
+[Example Pipeline](https://raw.githubusercontent.com/rlc-community-providers/microfocus-rlc-plugin/master/doc/pipeline.txt)
 
 ## Usage Instructions
 
-* Download the latest hpi from the ![release](https://raw.githubusercontent.com/rlc-community-providers/microfocus-rlc-plugin/master/release) directory.
+* Download the latest hpi from the [release](https://github.com/rlc-community-providers/microfocus-rlc-plugin/tree/master/release) directory.
 
 * Install into Jenkins using Jenkins Configuration - Plugins - Upload Plugin
 
@@ -69,18 +69,18 @@ mvn hpi:run -Djetty.port=8090
 
 Note: you will have to install the [Jenkins Pipeline](https://wiki.jenkins-ci.org/display/JENKINS/Pipeline+Plugin) plugins to be able to create pipelines.
 
-##Release Notes
+## Release Notes
 
-#####0.1.2
+##### 0.1.2
 
  - Removed ability to infinitely check for status - thus blocking Jenkins
  - Refactored dependencies
  
-#####0.1.1
+##### 0.1.1
 
  - Allowed checking for multiple States in `rlcGetReleasePackageState` and `rlcGetReleaseTrainState`
 
-#####0.1-SNAPSHOT
+##### 0.1-SNAPSHOT
 *The plugin has not yet been completed or validated and so is not yet available for installation directly from the Jenkins
 plugin repository. To try the plugin, please build locally using the above instructions and install the generated ".hpi" file directory.*
 
