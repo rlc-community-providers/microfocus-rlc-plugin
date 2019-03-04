@@ -234,9 +234,9 @@ public class RLCClient implements Serializable {
         soapMessage.saveChanges();
 
         /* Print the request message, just for debugging purposes */
-        System.out.println("Request SOAP Message:");
-        soapMessage.writeTo(System.out);
-        System.out.println("\n");
+        //System.out.println("Request SOAP Message:");
+        //soapMessage.writeTo(System.out);
+        //System.out.println("\n");
 
         return soapMessage;
     }
@@ -275,7 +275,7 @@ public class RLCClient implements Serializable {
     }
 
     /**
-     * Sets the Orchesration Engine url.
+     * Sets the Orchestration Engine url.
      *
      * @param url the url
      */
@@ -329,9 +329,9 @@ public class RLCClient implements Serializable {
     // generic HTTP REST get,post,put methods
     //
 
-    public void verifyConnection() throws AuthenticationException, Exception {
+    public String verifyConnection() throws Exception {
         // just see if we can get SSO Token for now
-        this.getSSOToken();
+        return this.getSSOToken();
     }
 
     public String executeJSONGet(URI uri) throws Exception {
@@ -417,7 +417,6 @@ public class RLCClient implements Serializable {
     }
 
     public String executeJSONPost(URI uri, String postContents) throws Exception {
-        System.out.println("in here");
         String result = null;
         HttpClient httpClient = new HttpClient();
 
@@ -429,13 +428,11 @@ public class RLCClient implements Serializable {
 
         PostMethod method = new PostMethod(uri.toString());
         //setDirectSsoInteractionHeader(method);
-        System.out.println(postContents);
         if (postContents != null)
             method.setRequestBody(postContents);
         method.setRequestHeader("Content-Type", "application/json");
         method.setRequestHeader("charset", "utf-8");
         String ssoToken = getSSOToken();
-        System.out.println(ssoToken);
         method.setRequestHeader("ALFSSOAuthNToken", ssoToken);
         try {
             HttpClientParams params = httpClient.getParams();
@@ -451,7 +448,7 @@ public class RLCClient implements Serializable {
                 throw new Exception("Micro Focus RLC returned error code: " + responseCode);
             } else {
                 result = method.getResponseBodyAsString();
-                System.out.println(result);
+                //System.out.println(result);
             }
         } catch (Exception e) {
             throw new Exception("Error connecting to Micro Focus RLC: " + e.getMessage());
@@ -478,9 +475,9 @@ public class RLCClient implements Serializable {
             SOAPMessage soapResponse = soapConnection.call(createSOAPRequest(alfEvent), soapEndpointUrl);
 
             // Print the SOAP Response
-            System.out.println("Response SOAP Message:");
-            soapResponse.writeTo(System.out);
-            System.out.println();
+            //System.out.println("Response SOAP Message:");
+            //soapResponse.writeTo(System.out);
+            //System.out.println();
 
             soapConnection.close();
         } catch (Exception e) {
@@ -489,7 +486,7 @@ public class RLCClient implements Serializable {
         }
     }
 
-    private String getSSOToken() throws AuthenticationException, Exception {
+    private String getSSOToken() throws Exception {
         String token = null;
         HttpClient httpClient = new HttpClient();
         URI uri = UriBuilder.fromPath(getOeUrl()).path("idp").path("services").path("rest").path("tokenservice").build();
@@ -514,6 +511,8 @@ public class RLCClient implements Serializable {
                 throw new AuthenticationException("Error connecting to Micro Focus RLC: Invalid user and/or password");
             } else if (responseCode != 200) {
                 throw new Exception("Micro Focus RLC returned error code: " + responseCode);
+            } else if (method.getResponseBodyAsString().isEmpty()) {
+                throw new Exception("No response from Micro Focus RLC: please check URLs and credentials");
             } else {
                 JSONObject jsonObj = new JSONObject(method.getResponseBodyAsString());
                 JSONObject tokenObj = jsonObj.getJSONObject("token");

@@ -84,7 +84,11 @@
 
 package com.microfocus.jenkins.plugins.rlc;
 
+import com.microfocus.jenkins.plugins.rlc.client.RLCClient;
+import com.microfocus.jenkins.plugins.rlc.exceptions.AuthenticationException;
+import hudson.AbortException;
 import hudson.model.Descriptor;
+import hudson.util.Secret;
 import org.apache.commons.lang.StringUtils;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -196,6 +200,22 @@ public class RLCSite implements Serializable {
         while (this.oeUrl != null && this.oeUrl.endsWith("/")) {
             this.oeUrl = this.oeUrl.substring(0, this.oeUrl.length() - 1);
         }
+    }
+
+    public String verifyConnection() throws AuthenticationException {
+        String token = null;
+        // check connection to Micro Focus DA
+        RLCClient rlcClient = new RLCClient(
+                aeUrl,
+                oeUrl,
+                user,
+                Secret.fromString(password));
+        try {
+            token = rlcClient.verifyConnection();
+        } catch (Exception ex) {
+           throw new AuthenticationException("Unable to connect to Micro Focus Release Control: " + ex.toString());
+        }
+        return token;
     }
 
     public String getUser() {

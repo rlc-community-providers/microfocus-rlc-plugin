@@ -159,8 +159,11 @@ public class RLCGlobalConfiguration extends GlobalConfiguration {
                 try {
                     RLCSite site = new RLCSite(null, aeUrl, oeUrl, user, password,
                             releaseTrainTableId, releasePackageTableId);
-                    //site.verifyConnection();
-                    ok("Success");
+                    if (site.verifyConnection().isEmpty()) {
+                        error("Unable to connect to Micro Focus Release Control");
+                    } else {
+                        ok("Success");
+                    }
                 } catch (Exception e) {
                     error(e.getMessage());
                 }

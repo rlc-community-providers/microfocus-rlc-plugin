@@ -95,7 +95,6 @@ import hudson.model.TaskListener;
 import hudson.util.FormValidation;
 import hudson.util.Secret;
 import org.apache.commons.lang.StringUtils;
-import org.jenkinsci.Symbol;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -179,32 +178,27 @@ public class SendALFEventStep extends AbstractRLCStep {
     @Extension
     public static class SendALFEventDescriptor extends AbstractRLCDescriptorImpl {
 
-        private FormValidation verifyEventId(final String eventId) {
+        private FormValidation doCheckEventId(@QueryParameter String eventId) {
             if (StringUtils.isEmpty(eventId))
                 return FormValidation.error("An eventId is required");
             return FormValidation.ok();
         }
 
-        private FormValidation verifyEventType(final String eventType) {
+        private FormValidation doCheckEventType(@QueryParameter String eventType) {
             if (StringUtils.isEmpty(eventType))
                 return FormValidation.error("An eventType is required");
             return FormValidation.ok();
         }
 
-        private FormValidation verifyObjectId(final String objectId) {
+        private FormValidation doCheckObjectId(@QueryParameter String objectId) {
             if (StringUtils.isEmpty(objectId))
                 return FormValidation.error("An objectId is required");
             return FormValidation.ok();
         }
 
-        private FormValidation verifyObjectType(final String objectType) {
+        private FormValidation doCheckObjectType(@QueryParameter String objectType) {
             if (StringUtils.isEmpty(objectType))
                 return FormValidation.error("An objectType is required");
-            return FormValidation.ok();
-        }
-
-        // TODO: more validation of contents
-        public FormValidation doCheckEventType(@QueryParameter final String value) {
             return FormValidation.ok();
         }
 

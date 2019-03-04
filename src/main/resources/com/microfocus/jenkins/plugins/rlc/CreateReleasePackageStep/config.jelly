@@ -34,6 +34,12 @@
     <f:entry field="releaseTrainId" title="${%Release Train Id}" help="${helpURL}/help-releaseTrainId.html">
         <f:textbox />
     </f:entry>
+    <f:entry field="releasePackageId" title="${%Parent Release Package Id}" help="${helpURL}/help-parentReleasePackageId.html">
+        <f:textbox />
+    </f:entry>
+    <f:entry field="taskTemplateId" title="${%Task Template Id}" help="${helpURL}/help-taskTemplateId.html">
+        <f:textbox />
+    </f:entry>
 
     <f:entry field="messageLog" title="${%Message Log}" help="${helpURL}/help-messageLog.html">
         <f:textarea />

@@ -1,0 +1,122 @@
+// Example Jenkins Pipeline for Release Control Integration
+// To use:
+//
+// 1. In Jenkins Global Configuration - create a connection to Release Control and name in "localhost - admin"
+// 2. Create a new pipeline job in Jenkins with parameterized build job with the following String parameters:
+//      APP_NAME
+//      APP_VERSION
+//      RLC_APP_ID
+//      RLC_RELEASE_TRAIN_ID
+//      RLC_PARENT_PACKAGE_ID
+//      RLC_RELEASE_TYPE_ID
+//      RLC_DEPLOYMENT_PATH_ID
+//      RLC_TASK_TEMPLATE_ID
+// 3. Set defaults for these parameters if required
+// 4. Copy and Paste the contents of this file in to the Jenkins Pipeline Script field.
+//
+// You can (and probably should) include most of this content in to an SCM controlled Jenkinsfile
+//
+// Note: be careful with "infinite" or large "maxRetries" as you can block other Jenkins jobs!
+//
+
+def rlcSite = 'localhost - admin'
+def rlcProjectName = 'TRM_RLM_TURNOVERS.TURNOVERS'
+
+// the following can be setup as parameterized build and changed on each pipeline job
+
+def appName = params.APP_NAME
+def appVersion = params.APP_VERSION
+
+def rtId = params.RLC_RELEASE_TRAIN_ID              // the release train id to check status of
+def rpParentId = params.RLC_PARENT_PACKAGE_ID       // the id of the parent release package (if any)
+def rlcApplicationId =  params.RLC_APP_ID           // the id of the application to associate the Release Package with
+def rlcReleaseTypeId = params.RLC_RELEASE_TYPE_ID   // the id of the release type, i.e. Major, Minor
+def rlcDeploymentPathId = params.RLC_DEPLOYMENT_PATH_ID // the id of the deployment path to use
+def rlcTaskTemplateId = params.RLC_TASK_TEMPLATE_ID // the id of the task template to use
+
+node {
+   def mvnHome
+   def rpId                                         // the id of the release package that is created
+
+   stage('Preparation') { // for display purposes
+      // Get some code from a GitHub repository
+      git 'https://github.com/jglick/simple-maven-project-with-tests.git'
+      // Get the Maven tool.
+      // ** NOTE: This 'M3' Maven tool must be configured
+      // **       in the global configuration.
+      mvnHome = tool 'M3'
+   }
+   stage('Build') {
+      // Run the maven build
+      if (isUnix()) {
+         sh "'${mvnHome}/bin/mvn' -Dmaven.test.failure.ignore clean package"
+      } else {
+         bat(/"${mvnHome}\bin\mvn" -Dmaven.test.failure.ignore clean package/)
+      }
+      'com.microfocus.jenkins.plugins.rlc.SendALFEventStep'(
+          eventId: "${rtId}",
+          eventType: 'Success',
+          objectId: 'Build',
+          objectType: 'Stage',
+          siteName: "${rlcSite}"
+      )
+   }
+   stage('Results') {
+        junit '**/target/surefire-reports/TEST-*.xml'
+        archive 'target/*.jar'
+   }
+   stage('Test') {
+        // check release train is in QA stage
+        rtState = 'com.microfocus.jenkins.plugins.rlc.GetReleaseTrainStateStep'(
+            siteName: "${rlcSite}",
+            releaseTrainId: "${rtId}",
+            desiredState: 'QA,Completed',
+            waitForState: false,
+            delayInterval: 5000,
+            maxRetries: 1
+        )
+        // if not abort the pipeline
+        if (rtState == "Planning" || rtState == "Development") {
+            currentBuild.result = 'ABORTED'
+            error('Stopping pipeline as Release Train has not progress to QA')
+        }
+        // else create a new release package
+        try {
+            rpId = 'com.microfocus.jenkins.plugins.rlc.CreateReleasePackageStep'(
+                siteName: "${rlcSite}",
+                title: "${appName} Application R${appVersion}.${BUILD_NUMBER}",
+                description: "Release of ${appName} Application - ${appVersion}.${BUILD_NUMBER}",
+                projectName: "${rlcProjectName}",
+                releaseTypeId: "${rlcReleaseTypeId}",
+                applicationId: "${rlcApplicationId}",
+                deploymentPathId: "${rlcDeploymentPathId}",
+                releaseTrainId: "${rtId}",
+                messageLog: "Created automatically from Jenkins ${env.BUILD_URL}"
+            )
+        } catch (Exception e) {    
+            currentBuild.result = 'ABORTED'
+            error('Stopping pipeline as Release Package could not be created')
+        }    
+        println "Release Package created - formal deployment will now proceed using Micro Focus Release Control"
+
+   }
+   stage('Production') {
+       // wait until Release Package has been Completed
+       timeout(time:10, unit:'MINUTES') {
+           rpState = 'com.microfocus.jenkins.plugins.rlc.GetReleasePackageStateStep'(
+               siteName: "${rlcSite}",
+               releasePackageId: "${rpId}",
+               desiredState: 'Completed,Closed',
+               waitForState: true,
+               delayInterval: 5000,
+               maxRetries: 2
+           )
+       }
+	   // if not abort the pipeline
+       if (rpState != "Completed" || rpState == "Closed") {
+           currentBuild.result = 'ABORTED'
+           error('Stopping pipeline as Release Package has not progress to Production within time permitted')
+       }
+       println "Sample Application R${appVersion}.${BUILD_NUMBER} has been deployed to Production..."
+    }
+}

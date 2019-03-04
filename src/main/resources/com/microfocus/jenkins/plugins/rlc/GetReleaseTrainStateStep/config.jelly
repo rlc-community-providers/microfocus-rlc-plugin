@@ -26,7 +26,7 @@
         <f:textbox default="60000"/>
     </f:entry>
     <f:entry field="maxRetries" title="${%Maximum Retries}" help="${helpURL}/help-maxRetries.html">
-        <f:textbox default="-1"/>
+        <f:textbox default="0"/>
     </f:entry>
 
 </j:jelly>

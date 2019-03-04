@@ -11,7 +11,7 @@
     </parent>
     <groupId>com.microfocus.jenkins.plugins.rlc</groupId>
     <artifactId>microfocus-rlc</artifactId>
-    <version>0.1.1</version>
+    <version>0.1.2</version>
     <packaging>hpi</packaging>
 
     <name>Micro Focus Release Control</name>
@@ -29,13 +29,24 @@
         <developer>
             <id>akevinlee</id>
             <name>Kevin A. Lee</name>
-            <email>klee@serena.com</email>
+            <email>kevin.lee@microfocus.com</email>
         </developer>
     </developers>
 
     <properties>
-        <jenkins.version>1.642.4</jenkins.version>
         <java.level>8</java.level>
+        <!--jenkins.version>1.642.4</jenkins.version-->
+        <jenkins.version>2.7.3</jenkins.version>
+        <jenkins-test-harness.version>2.15</jenkins-test-harness.version>
+        <pipeline.version>2.5</pipeline.version>
+        <jackson2.version>2.6.0</jackson2.version>
+        <retrofit2.version>2.5.0</retrofit2.version>
+        <lombok.version>1.16.12</lombok.version>
+        <wiremock.version>2.3.1</wiremock.version>
+        <mockito.version>1.10.19</mockito.version>
+        <powermock.version>1.6.3</powermock.version>
+        <assertj-core.version>3.6.1</assertj-core.version>
+        <assertj-assertions-generator-maven-plugin.version>2.0.0</assertj-assertions-generator-maven-plugin.version>
         <workflow-step-api.version>2.7</workflow-step-api.version>
         <workflow-cps.version>2.23</workflow-cps.version>
         <workflow-job.version>2.9</workflow-job.version>
@@ -43,11 +54,28 @@
         <plain-credentials.version>1.3</plain-credentials.version>
         <httpclient.version>4.5.1</httpclient.version>
         <junit.version>4.11</junit.version>
+        <sda.version>6.1.0</sda.version>
     </properties>
 
     <dependencies>
 
-        <!-- jenkins pipeline api -->
+        <dependency>
+            <groupId>org.jenkins-ci.plugins.workflow</groupId>
+            <artifactId>workflow-aggregator</artifactId>
+            <version>${pipeline.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jenkins-ci.plugins</groupId>
+            <artifactId>token-macro</artifactId>
+            <version>2.4</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jenkins-ci.plugins</groupId>
+            <artifactId>pipeline-input-step</artifactId>
+            <version>2.8</version>
+        </dependency>
+
+        <!-- jenkins pipeline api
         <dependency>
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-step-api</artifactId>
@@ -60,7 +88,7 @@
             <artifactId>workflow-job</artifactId>
             <version>${workflow-job.version}</version>
             <scope>test</scope>
-        </dependency>
+        </dependency-->
 
         <!-- jenkins credentials api -->
         <dependency>
@@ -99,10 +127,21 @@
             <version>2.23.1</version>
         </dependency>
 
+        <!-- Serena VFS dependencies from local repository -->
+        <dependency>
+            <groupId>com.serena</groupId>
+            <artifactId>vfs</artifactId>
+            <version>${sda.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.serena</groupId>
+            <artifactId>commons-fileutils</artifactId>
+            <version>${sda.version}</version>
+        </dependency>
         <dependency>
             <groupId>com.serena</groupId>
             <artifactId>commons-util</artifactId>
-            <version>CURRENT</version>
+            <version>${sda.version}</version>
         </dependency>
 
         <dependency>
@@ -122,6 +161,10 @@
     </scm>
 
     <repositories>
+        <repository>
+            <id>local-repository</id>
+            <url>file://${project.basedir}/repo</url>
+        </repository>
         <repository>
             <id>repo.jenkins-ci.org</id>
             <url>https://repo.jenkins-ci.org/public/</url>

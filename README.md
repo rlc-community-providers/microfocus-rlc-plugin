@@ -1,12 +1,13 @@
 # Micro Focus Release Control plugin for Jenkins 2.x
 
-This plugin allows [Micro Focus Release Control](https://www.microfocus.com/products/release-control/) to be used in [Jenkins Pipelines](https://jenkins.io/solutions/pipeline/).
-It provides the following adhoc build steps:
+This plugin allows [Micro Focus Release Control](https://www.microfocus.com/products/release-control/) (RLC) to be 
+used in and invoked from [Jenkins Pipelines](https://jenkins.io/solutions/pipeline/). It is a community supported
+plugin and provides the following adhoc build steps:
 
-- Create Release Package 
-- Get Release Train State
-- Ger Release Package State
-- Send ALF Event
+- [x] Create Release Package - create a new Release Package from Jenkins
+- [x] Get Release Train State - get the state of a Release Train
+- [x] Get Release Package State - get the state of a Release Package
+- [x] Send ALF Event - Send an ALF event that could be used to carry out additional automation from SBM/RLC
 
 Micro Focus Release Control can be used across the development lifecycle but is typically used to automate releases into controlled environments (Staging/Pre-Prod/Production) and has additional enterprise capabilities above and beyond
 Jenkins to support this. 
@@ -15,38 +16,46 @@ Jenkins to support this.
 
 Below is an example of some pipeline code that uses these steps.
 ```
-env.RLC_SITE_NAME = 'localhost - admin'
-env.RLC_RP_PROJECT_NAME = 'TRM_RLM_TURNOVERS.TURNOVERS'
+def rlcSite = 'localhost - admin'
+def rlcProjectName = 'TRM_RLM_TURNOVERS.TURNOVERS'
+def appVersion = '1.0'
 
-def rpId = rlcCreateReleasePackage applicationId: 1, deploymentPathId: 1, 
-    description: "Release of ${BUILD_NUMBER}", messageLog: "from ${JENKINS_URL}", 
-    projectName: "${RLC_RP_PROJECT_NAME}", releaseTrainId: 2, releaseTypeId: 1, 
-    siteName: "${RLC_SITE_NAME}", 
-    title: "Release ${BUILD_NUMBER}"
+def rpId =  'com.microfocus.jenkins.plugins.rlc.CreateReleasePackageStep'(
+       siteName: "${rlcSite}",
+       title: "Application R${appVersion}.${BUILD_NUMBER}",
+       description: "Release of Application - ${appVersion}.${BUILD_NUMBER}",
+       projectName: "${rlcProjectName}",
+       releaseTypeId: 1,
+       applicationId: 1,
+       deploymentPathId: 1,
+       releaseTrainId: 1,
+       messageLog: "Created automatically from Jenkins ${env.BUILD_URL}"
+   )
 println rpId
-// or we can also qualify by class:
-def packageState = 'com.microfocus.jenkins.plugins.rlc.rlcGetReleasePackageState'(delayInterval: 5000, desiredState: 'Completed', 
-    maxRetries: -1, releasePackageId: "${rpId}", 
-    siteName: "${RLC_SITE_NAME}", waitForState: true)
-println packageState
-def rtState = rlcGetReleaseTrainState delayInterval: 5000, desiredState: 'Development,QA', maxRetries: -1, 
-    releaseTrainId: 1, siteName: "${RLC_SITE_NAME}", waitForState: true
-println rtState
-rlcSendALFEvent eventId: '', eventType: 'Pending', objectId: "${BUILD_NUMBER}", 
-    objectType: 'Job', siteName: "${RLC_SITE_NAME}"
+def rpState = 'com.microfocus.jenkins.plugins.rlc.GetReleasePackageStateStep'(
+       siteName: "${rlcSite}",
+       releasePackageId: "${rpId}",
+       desiredState: 'Completed,Closed',
+       waitForState: true,
+       delayInterval: 5000,
+       maxRetries: 5
+   )
+println rpState   
 ```
-![Example Pipeline](https://raw.githubusercontent.com/rlc-community-providers/microfocus-rlc-plugin/master/images/jenkins-pipeline.png)
+![Example Pipeline](https://raw.githubusercontent.com/rlc-community-providers/microfocus-rlc-plugin/master/doc/pipeline.txt)
 
-## Build/Usage Instructions
+## Usage Instructions
+
+* Download the latest hpi from the ![release](https://raw.githubusercontent.com/rlc-community-providers/microfocus-rlc-plugin/master/release) directory.
+
+* Install into Jenkins using Jenkins Configuration - Plugins - Upload Plugin
+
+* Create a new Site Profile from the Jenkins Global Configuration page to connect to Micro Focus RLC, and that will be referred to in the steps - "localhost - admin" in the above example.
+
+
+## Build Instructions
 
 * Clone the repository from github.
-
-* Install (Micro Focus) dependencies into your local repository:
-
-```
-mvn install:install-file -DgroupId=com.urbancode -DartifactId=codestation2-client-all -Dversion=1.1 -Dpackaging=jar -Dfile=lib/codestation2-client-all-1.1.jar -DgeneratePom=true
-mvn install:install-file -DgroupId=com.serena -DartifactId=commons-util -Dversion=CURRENT -Dpackaging=jar -Dfile=lib/commons-util-CURRENT.jar -DgeneratePom=true
-```
 
 * Run the plugin in test Jenkins instance:
 
@@ -62,6 +71,11 @@ Note: you will have to install the [Jenkins Pipeline](https://wiki.jenkins-ci.or
 
 ##Release Notes
 
+#####0.1.2
+
+ - Removed ability to infinitely check for status - thus blocking Jenkins
+ - Refactored dependencies
+ 
 #####0.1.1
 
  - Allowed checking for multiple States in `rlcGetReleasePackageState` and `rlcGetReleaseTrainState`

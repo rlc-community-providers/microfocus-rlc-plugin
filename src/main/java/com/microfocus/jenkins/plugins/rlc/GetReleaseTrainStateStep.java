@@ -99,6 +99,7 @@ import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
+import org.kohsuke.stapler.QueryParameter;
 
 import javax.annotation.Nonnull;
 import javax.ws.rs.core.UriBuilder;
@@ -190,13 +191,11 @@ public class GetReleaseTrainStateStep extends AbstractRLCStep {
     @Extension
     public static class GetReleaseTrainStateDescriptor extends AbstractRLCDescriptorImpl {
 
-        private FormValidation verifyReleaseTrainId(final Integer releaseTrainId) {
+        private FormValidation doCheckReleaseTrainId(@QueryParameter Integer releaseTrainId) {
             if (releaseTrainId == null || releaseTrainId == 0)
                 return FormValidation.error("A Release Train Id is required");
             return FormValidation.ok();
         }
-
-        // TODO: more validation of contents
 
         @Override
         public String getDisplayName() {
@@ -260,6 +259,11 @@ public class GetReleaseTrainStateStep extends AbstractRLCStep {
             String stateVal = "";
             String itemUrl = "";
             int numTries = 0;
+            int maxTries = step.getMaxRetries();
+            if (maxTries < 0) {
+                step.log("Max retries less than zerp is not supported; setting to \"1\"");
+                maxTries = 1;
+            }
             boolean finished = false;
             while (!finished) {
                 try {
@@ -279,7 +283,7 @@ public class GetReleaseTrainStateStep extends AbstractRLCStep {
                                 this.getContext().setResult(Result.SUCCESS);
                                 finished = true;
                             } else {
-                                if (step.getMaxRetries() != -1 && ++numTries == step.getMaxRetries()) {
+                                if (numTries >= maxTries) {
                                     step.log("Maximum number of retries reached ... aborting ...");
                                     finished = true;
                                     this.getContext().setResult(Result.ABORTED);
@@ -290,6 +294,7 @@ public class GetReleaseTrainStateStep extends AbstractRLCStep {
                                     } catch (InterruptedException ex) {
                                         throw new AbortException("Unable to Get Release Train State: " + ex.toString());
                                     }
+                                    numTries++;
                                 }
                             }
                         } else {
