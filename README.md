@@ -1,16 +1,13 @@
 # Micro Focus Release Control plugin for Jenkins 2.x
 
-This plugin allows [Micro Focus Release Control](https://www.microfocus.com/products/release-control/) (RLC) to be 
-used in and invoked from [Jenkins Pipelines](https://jenkins.io/solutions/pipeline/). It is a community supported
-plugin and provides the following adhoc build steps:
+This plugin allows [Micro Focus Release Control](https://www.microfocus.com/products/release-control/) (RLC) to be used in and invoked from [Jenkins Pipelines](https://jenkins.io/solutions/pipeline/). It is a community supported plugin and provides the following ad-hoc build steps:
 
-- [x] Create Release Package - create a new Release Package from Jenkins
-- [x] Get Release Train State - get the state of a Release Train
-- [x] Get Release Package State - get the state of a Release Package
-- [x] Send ALF Event - Send an ALF event that could be used to carry out additional automation from SBM/RLC
+- [x] **Create Release Package** - create a new Release Package from Jenkins
+- [x] **Get Release Train State** - get the state of a Release Train
+- [x] **Get Release Package State** - get the state of a Release Package
+- [x] **Send ALF Event** - Send an ALF event that could be used to carry out additional automation from RLC (using the SBM platform Orchestration Engine)
 
-Micro Focus Release Control can be used across the development lifecycle but is typically used to automate releases into controlled environments (Staging/Pre-Prod/Production) and has additional enterprise capabilities above and beyond
-Jenkins to support this. 
+Micro Focus Release Control can be used across the development lifecycle but is typically used to automate releases into controlled environments (Staging/Pre-Prod/Production) and has additional enterprise capabilities above and beyond Jenkins to support this. 
 
 ## Example pipeline code
 
@@ -42,16 +39,18 @@ def rpState = 'com.microfocus.jenkins.plugins.rlc.GetReleasePackageStateStep'(
    )
 println rpState   
 ```
-[Example Pipeline](https://raw.githubusercontent.com/rlc-community-providers/microfocus-rlc-plugin/master/doc/pipeline.txt)
-
 ## Usage Instructions
 
 * Download the latest hpi from the [release](https://github.com/rlc-community-providers/microfocus-rlc-plugin/tree/master/release) directory.
 
-* Install into Jenkins using Jenkins Configuration - Plugins - Upload Plugin
+* Install into Jenkins using `Manage Jenkins -> Manage Plugins -> Advanced - Upload Plugin` and browse to hpi downloaded above.
 
-* Create a new Site Profile from the Jenkins Global Configuration page to connect to Micro Focus RLC, and that will be referred to in the steps - "localhost - admin" in the above example.
+* Restart Jenkins for the plugin to be available.
 
+* Create a new profile for `RLC Server` from the `Manage Jenkins -> Configure System` page. In a new RLC instance the Release Package and Release Train Table Id's should be correct but would need to updated in an existing SBM instance.
+  Note: This site is referred to in the steps above as "localhost - admin".
+  
+* Create or update a Jenkins Pipeline and reference the RLC steps. You can create a parameterized build so that the step parameters are used consistently - see this [Example Pipeline](https://raw.githubusercontent.com/rlc-community-providers/microfocus-rlc-plugin/master/doc/pipeline.txt) 
 
 ## Build Instructions
 
@@ -65,7 +64,7 @@ mvn hpi:run -Djetty.port=8090
 
 * Browse to **http://localhost:8090/jenkins** to test the plugin. 
 
-* Create a new Site Profile from the Jenkins Global Configuration page to connect to Micro Focus RLC, and that will be referred to in the steps - "localhost - admin" in the above example.
+* Create a new profile as above.
 
 Note: you will have to install the [Jenkins Pipeline](https://wiki.jenkins-ci.org/display/JENKINS/Pipeline+Plugin) plugins to be able to create pipelines.
 
@@ -79,8 +78,3 @@ Note: you will have to install the [Jenkins Pipeline](https://wiki.jenkins-ci.or
 ##### 0.1.1
 
  - Allowed checking for multiple States in `rlcGetReleasePackageState` and `rlcGetReleaseTrainState`
-
-##### 0.1-SNAPSHOT
-*The plugin has not yet been completed or validated and so is not yet available for installation directly from the Jenkins
-plugin repository. To try the plugin, please build locally using the above instructions and install the generated ".hpi" file directory.*
-
