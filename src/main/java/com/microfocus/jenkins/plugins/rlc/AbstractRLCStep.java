@@ -88,6 +88,7 @@ import com.microfocus.jenkins.plugins.rlc.configuration.RLCGlobalConfiguration;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import jenkins.model.GlobalConfiguration;
+import org.apache.log4j.Logger;
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.kohsuke.stapler.DataBoundSetter;
@@ -102,7 +103,7 @@ public abstract class AbstractRLCStep extends Step {
     private String siteName;
     private PrintStream logger;
     private List<String> fileList = new ArrayList<String>();
-
+    protected static final Logger LOGGER = Logger.getLogger("jenkins.RLCClient");
     private TaskListener listener;
 
     public AbstractRLCStep(String siteName) {
@@ -184,7 +185,7 @@ public abstract class AbstractRLCStep extends Step {
      */
     //@Symbol("rlcStep")
     //@Extension // This indicates to Jenkins that this is an implementation of an extension point.
-    public abstract static class AbstractRLCDescriptorImpl extends StepDescriptor {
+    /*public abstract static class AbstractRLCDescriptorImpl extends StepDescriptor {
 
         private RLCGlobalConfiguration rlcGlobalConfiguration;
 
@@ -207,7 +208,7 @@ public abstract class AbstractRLCStep extends Step {
 
         /*
          * Override this method with the steps display name
-         */
+         *
         @Override
         public String getDisplayName() {
             return "Micro Focus RLC Step";
@@ -215,7 +216,7 @@ public abstract class AbstractRLCStep extends Step {
 
         /*
          * Override this method with the steps function name
-         */
+         *
         @Override
         public String getFunctionName() {
             return "rlcStep";
@@ -225,7 +226,7 @@ public abstract class AbstractRLCStep extends Step {
         public Set<? extends Class<?>> getRequiredContext() {
             return Collections.singleton(Run.class);
         }
-    }
+    }*/
 
 }
 

@@ -85,6 +85,7 @@
 package com.microfocus.jenkins.plugins.rlc;
 
 import com.microfocus.jenkins.plugins.rlc.client.RLCClient;
+import com.microfocus.jenkins.plugins.rlc.configuration.RLCGlobalConfiguration;
 import com.microfocus.jenkins.plugins.rlc.utils.RLCUtils;
 import hudson.AbortException;
 import hudson.Extension;
@@ -93,9 +94,11 @@ import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.util.FormValidation;
 import hudson.util.Secret;
+import jenkins.model.GlobalConfiguration;
 import org.apache.commons.lang.StringUtils;
 import org.codehaus.jettison.json.JSONObject;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
+import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
@@ -188,7 +191,26 @@ public class GetReleasePackageStateStep extends AbstractRLCStep {
      * </p>
      */
     @Extension
-    public static class GetReleasePackageStateDescriptor extends AbstractRLCDescriptorImpl {
+    public static class GetReleasePackageStateDescriptor extends StepDescriptor {
+
+        private RLCGlobalConfiguration rlcGlobalConfiguration;
+
+        public GetReleasePackageStateDescriptor() {
+            load();
+            this.rlcGlobalConfiguration = GlobalConfiguration.all().get(RLCGlobalConfiguration.class);
+        }
+
+        public RLCSite getSiteByName(String siteName) {
+            return rlcGlobalConfiguration.getSiteByName(siteName);
+        }
+
+        public RLCSite[] getSites() {
+            return rlcGlobalConfiguration.getSites();
+        }
+
+        public RLCSite getSite(String siteName) {
+            return getSiteByName(siteName);
+        }
 
         private FormValidation doCheckReleasePackageId(@QueryParameter Integer releasePackageId) {
             if (releasePackageId == null || releasePackageId == 0)
@@ -237,7 +259,9 @@ public class GetReleasePackageStateStep extends AbstractRLCStep {
                 step.log("Waiting for desired state to be in: " + step.getDesiredState());
             }
 
-            // check connection to Micro Focus DA
+            // check connection to Micro Focus RLC
+            LOGGER.info("Creating RLC Client Connection:");
+            LOGGER.info("AEURL="+site.getAeUrl()+"OEURL="+site.getOeUrl()+"User="+site.getUser());
             RLCClient rlcClient = new RLCClient(
                     site.getAeUrl(),
                     site.getOeUrl(),
@@ -260,13 +284,15 @@ public class GetReleasePackageStateStep extends AbstractRLCStep {
             int numTries = 0;
             int maxTries = step.getMaxRetries();
             if (maxTries < 0) {
-                step.log("Max retries less than zerp is not supported; setting to \"1\"");
+                step.log("Max retries less than zero is not supported; setting to \"1\"");
                 maxTries = 1;
             }
             boolean finished = false;
             while (!finished) {
                 try {
+                    LOGGER.info("Executing GET: " + uri.toString());
                     String jsonOut = rlcClient.executeJSONGet(uri);
+                    LOGGER.info("Response: " + jsonOut);
                     JSONObject itemObj = new JSONObject(jsonOut).optJSONObject("item");
                     if (itemObj != null) {
                         JSONObject fieldsObj = itemObj.getJSONObject("fields");

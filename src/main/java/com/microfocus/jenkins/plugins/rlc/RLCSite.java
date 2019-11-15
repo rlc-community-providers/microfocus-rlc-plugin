@@ -90,6 +90,7 @@ import hudson.AbortException;
 import hudson.model.Descriptor;
 import hudson.util.Secret;
 import org.apache.commons.lang.StringUtils;
+import org.apache.log4j.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -101,7 +102,6 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Representation of Release Control instance and defaults
@@ -111,7 +111,8 @@ import java.util.logging.Logger;
 public class RLCSite implements Serializable {
 
     private static final long serialVersionUID = 1L;
-    private static final Logger LOGGER = Logger.getLogger(Descriptor.class.getName());
+    private static final Logger LOGGER = Logger.getLogger("jenkins.RLCClient");
+
     private String profileName;
     private String aeUrl;
     private String oeUrl;
@@ -153,7 +154,7 @@ public class RLCSite implements Serializable {
                 sites.add(new RLCSite(profileName, aeUrl, oeUrl, user, password, releaseTrainTableId, releasePackageTableId));
             }
         } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Failed to read configuration file: " + file.getName(), e);
+            LOGGER.warn("Failed to read configuration file: " + file.getName(), e);
         }
         return sites;
     }
@@ -204,7 +205,7 @@ public class RLCSite implements Serializable {
 
     public String verifyConnection() throws AuthenticationException {
         String token = null;
-        // check connection to Micro Focus DA
+        // check connection to Micro Focus RLC
         RLCClient rlcClient = new RLCClient(
                 aeUrl,
                 oeUrl,

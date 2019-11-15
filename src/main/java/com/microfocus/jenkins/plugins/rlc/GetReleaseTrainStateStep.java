@@ -85,6 +85,7 @@
 package com.microfocus.jenkins.plugins.rlc;
 
 import com.microfocus.jenkins.plugins.rlc.client.RLCClient;
+import com.microfocus.jenkins.plugins.rlc.configuration.RLCGlobalConfiguration;
 import com.microfocus.jenkins.plugins.rlc.utils.RLCUtils;
 import hudson.AbortException;
 import hudson.Extension;
@@ -93,9 +94,11 @@ import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.util.FormValidation;
 import hudson.util.Secret;
+import jenkins.model.GlobalConfiguration;
 import org.apache.commons.lang.StringUtils;
 import org.codehaus.jettison.json.JSONObject;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
+import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
@@ -189,7 +192,26 @@ public class GetReleaseTrainStateStep extends AbstractRLCStep {
      * </p>
      */
     @Extension
-    public static class GetReleaseTrainStateDescriptor extends AbstractRLCDescriptorImpl {
+    public static class GetReleaseTrainStateDescriptor extends StepDescriptor {
+
+        private RLCGlobalConfiguration rlcGlobalConfiguration;
+
+        public GetReleaseTrainStateDescriptor() {
+            load();
+            this.rlcGlobalConfiguration = GlobalConfiguration.all().get(RLCGlobalConfiguration.class);
+        }
+
+        public RLCSite getSiteByName(String siteName) {
+            return rlcGlobalConfiguration.getSiteByName(siteName);
+        }
+
+        public RLCSite[] getSites() {
+            return rlcGlobalConfiguration.getSites();
+        }
+
+        public RLCSite getSite(String siteName) {
+            return getSiteByName(siteName);
+        }
 
         private FormValidation doCheckReleaseTrainId(@QueryParameter Integer releaseTrainId) {
             if (releaseTrainId == null || releaseTrainId == 0)
@@ -238,8 +260,10 @@ public class GetReleaseTrainStateStep extends AbstractRLCStep {
                 step.log("Waiting for desired state to be in: " + step.getDesiredState());
             }
 
-            // check connection to Micro Focus DA
-            com.microfocus.jenkins.plugins.rlc.client.RLCClient rlcClient = new RLCClient(
+            // check connection to Micro Focus RLC
+            LOGGER.info("Creating RLC Client Connection:");
+            LOGGER.info("AEURL="+site.getAeUrl()+"OEURL="+site.getOeUrl()+"User="+site.getUser());
+            RLCClient rlcClient = new RLCClient(
                     site.getAeUrl(),
                     site.getOeUrl(),
                     site.getUser(),
@@ -267,7 +291,9 @@ public class GetReleaseTrainStateStep extends AbstractRLCStep {
             boolean finished = false;
             while (!finished) {
                 try {
+                    LOGGER.info("Executing GET: " + uri.toString());
                     String jsonOut = rlcClient.executeJSONGet(uri);
+                    LOGGER.info("Response: " + jsonOut);
                     JSONObject itemObj = new JSONObject(jsonOut).optJSONObject("item");
                     if (itemObj != null) {
                         JSONObject fieldsObj = itemObj.getJSONObject("fields");

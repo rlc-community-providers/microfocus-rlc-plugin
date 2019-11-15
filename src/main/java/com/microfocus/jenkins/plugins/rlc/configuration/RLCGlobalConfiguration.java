@@ -90,6 +90,7 @@ import hudson.util.CopyOnWriteList;
 import hudson.util.FormFieldValidator;
 import jenkins.model.GlobalConfiguration;
 import net.sf.json.JSONObject;
+import org.apache.log4j.Logger;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
@@ -100,6 +101,8 @@ import java.util.Iterator;
 
 @Extension
 public class RLCGlobalConfiguration extends GlobalConfiguration {
+
+    private static final Logger LOGGER = Logger.getLogger("jenkins.RLCClient");
 
     private final CopyOnWriteList<RLCSite> sites = new CopyOnWriteList<>();
 

@@ -85,6 +85,7 @@
 package com.microfocus.jenkins.plugins.rlc;
 
 import com.microfocus.jenkins.plugins.rlc.client.RLCClient;
+import com.microfocus.jenkins.plugins.rlc.configuration.RLCGlobalConfiguration;
 import com.microfocus.jenkins.plugins.rlc.utils.RLCUtils;
 import hudson.AbortException;
 import hudson.Extension;
@@ -92,9 +93,11 @@ import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.util.FormValidation;
 import hudson.util.Secret;
+import jenkins.model.GlobalConfiguration;
 import org.apache.commons.lang.StringUtils;
 import org.codehaus.jettison.json.JSONObject;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
+import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
@@ -237,7 +240,26 @@ public class CreateReleasePackageStep extends AbstractRLCStep {
      * </p>
      */
     @Extension
-    public static class CreateReleasePackageDescriptor extends AbstractRLCDescriptorImpl {
+    public static class CreateReleasePackageDescriptor extends StepDescriptor {
+
+        private RLCGlobalConfiguration rlcGlobalConfiguration;
+
+        public CreateReleasePackageDescriptor() {
+            load();
+            this.rlcGlobalConfiguration = GlobalConfiguration.all().get(RLCGlobalConfiguration.class);
+        }
+
+        public RLCSite getSiteByName(String siteName) {
+            return rlcGlobalConfiguration.getSiteByName(siteName);
+        }
+
+        public RLCSite[] getSites() {
+            return rlcGlobalConfiguration.getSites();
+        }
+
+        public RLCSite getSite(String siteName) {
+            return getSiteByName(siteName);
+        }
 
         private FormValidation doCheckProjectName(@QueryParameter String projectName) {
             if (StringUtils.isEmpty(projectName))
@@ -283,6 +305,7 @@ public class CreateReleasePackageStep extends AbstractRLCStep {
         public Set<? extends Class<?>> getRequiredContext() {
             return Collections.singleton(Run.class);
         }
+
     }
 
     public static final class Execution extends AbstractItemProviderExecution<String> {
@@ -315,7 +338,9 @@ public class CreateReleasePackageStep extends AbstractRLCStep {
             String rlcReleasePackageId = String.valueOf(step.getReleasePackageId());
             String rlcTaskTemplateId = String.valueOf(step.getTaskTemplateId());
 
-            // check connection to Micro Focus DA
+            // check connection to Micro Focus RLC
+            LOGGER.info("Creating RLC Client Connection:");
+            LOGGER.info("AEURL="+site.getAeUrl()+"OEURL="+site.getOeUrl()+"User="+site.getUser());
             RLCClient rlcClient = new RLCClient(
                     site.getAeUrl(),
                     site.getOeUrl(),
@@ -333,7 +358,8 @@ public class CreateReleasePackageStep extends AbstractRLCStep {
 
                 UriBuilder uriBuilder = UriBuilder.fromPath(site.getAeUrl()).path("jsonapi").path("submittoproject").path(resolvedProjectName);
                 URI uri = uriBuilder.build();
-                step.log("Submitting to: " + uri.toString());
+                step.log("Submitting to project: " + uri.toString());
+                LOGGER.info("Submitting to project: " + uri.toString());
                 String postBody = "{\"transition\": {" +
                         "\"TITLE\":\"" + resolvedTitle + "\"," +
                         "\"RLM_RELEASE_TYPE\":" + step.getReleaseTypeId().toString() + "," +
@@ -346,7 +372,9 @@ public class CreateReleasePackageStep extends AbstractRLCStep {
                         "\"DESCRIPTION\":\"" + resolvedDescription + "\"" +
                     "}," +
                     "\"fixedFields\": false, \"fields\": [ {\"dbname\":\"ISSUEID\"}]}";
+                LOGGER.info("With Body: " + postBody);
                 String jsonOut = rlcClient.executeJSONPost(uri, postBody);
+                LOGGER.info("Response: " + jsonOut);
                 JSONObject itemObj = new JSONObject(jsonOut).optJSONObject("item");
                 if (itemObj != null) {
                     JSONObject idObj = itemObj.getJSONObject("id");
@@ -357,8 +385,6 @@ public class CreateReleasePackageStep extends AbstractRLCStep {
                     step.log("See: " + RLCUtils.setWorkcenterUrl(itemUrl));
                 } else {
                     step.log("Unable to Create Release Package: " + jsonOut);
-                    step.log("JSON Post Body was:");
-                    step.log(postBody);
                     throw new AbortException("Unable to Create Release Package: " + jsonOut);
                 }
             } catch (Exception ex) {

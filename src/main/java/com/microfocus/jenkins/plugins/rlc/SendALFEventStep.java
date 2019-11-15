@@ -85,6 +85,7 @@
 package com.microfocus.jenkins.plugins.rlc;
 
 import com.microfocus.jenkins.plugins.rlc.client.RLCClient;
+import com.microfocus.jenkins.plugins.rlc.configuration.RLCGlobalConfiguration;
 import com.microfocus.jenkins.plugins.rlc.model.ALFEvent;
 import com.microfocus.jenkins.plugins.rlc.model.JenkinsEnvironment;
 import hudson.AbortException;
@@ -94,8 +95,10 @@ import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.util.FormValidation;
 import hudson.util.Secret;
+import jenkins.model.GlobalConfiguration;
 import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
+import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
@@ -176,7 +179,26 @@ public class SendALFEventStep extends AbstractRLCStep {
      * </p>
      */
     @Extension
-    public static class SendALFEventDescriptor extends AbstractRLCDescriptorImpl {
+    public static class SendALFEventDescriptor extends StepDescriptor {
+
+        private RLCGlobalConfiguration rlcGlobalConfiguration;
+
+        public SendALFEventDescriptor() {
+            load();
+            this.rlcGlobalConfiguration = GlobalConfiguration.all().get(RLCGlobalConfiguration.class);
+        }
+
+        public RLCSite getSiteByName(String siteName) {
+            return rlcGlobalConfiguration.getSiteByName(siteName);
+        }
+
+        public RLCSite[] getSites() {
+            return rlcGlobalConfiguration.getSites();
+        }
+
+        public RLCSite getSite(String siteName) {
+            return getSiteByName(siteName);
+        }
 
         private FormValidation doCheckEventId(@QueryParameter String eventId) {
             if (StringUtils.isEmpty(eventId))

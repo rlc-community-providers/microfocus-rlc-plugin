@@ -11,7 +11,7 @@
     </parent>
     <groupId>com.microfocus.jenkins.plugins.rlc</groupId>
     <artifactId>microfocus-rlc</artifactId>
-    <version>0.1.2</version>
+    <version>0.1.3-SNAPSHOT</version>
     <packaging>hpi</packaging>
 
     <name>Micro Focus Release Control</name>

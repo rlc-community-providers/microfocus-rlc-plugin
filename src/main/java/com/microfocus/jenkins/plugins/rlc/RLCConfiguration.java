@@ -87,6 +87,7 @@ package com.microfocus.jenkins.plugins.rlc;
 import hudson.Extension;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.Descriptor;
+import org.apache.log4j.Logger;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
@@ -96,6 +97,8 @@ import org.kohsuke.stapler.DataBoundSetter;
  * @author Kevin A. Lee
  */
 public class RLCConfiguration extends AbstractDescribableImpl<RLCConfiguration> {
+
+    private static final Logger LOGGER = Logger.getLogger("jenkins.RLCClient");
 
     private String aeUrl;
     private String oeUrl;

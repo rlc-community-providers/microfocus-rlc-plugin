@@ -98,6 +98,7 @@ import org.apache.commons.httpclient.methods.PutMethod;
 import org.apache.commons.httpclient.params.HttpClientParams;
 import org.apache.commons.httpclient.protocol.Protocol;
 import org.apache.commons.httpclient.protocol.ProtocolSocketFactory;
+import org.apache.log4j.Logger;
 import org.codehaus.jettison.json.JSONObject;
 
 import javax.ws.rs.core.UriBuilder;
@@ -114,6 +115,7 @@ import java.net.URI;
 public class RLCClient implements Serializable {
 
     private static final long serialVersionUID = 1L;
+    private static final Logger LOGGER = Logger.getLogger("jenkins.RLCClient");
 
     /**
      * The Application Engine URL.
@@ -234,9 +236,8 @@ public class RLCClient implements Serializable {
         soapMessage.saveChanges();
 
         /* Print the request message, just for debugging purposes */
-        //System.out.println("Request SOAP Message:");
-        //soapMessage.writeTo(System.out);
-        //System.out.println("\n");
+        info("Request SOAP Message:");
+        soapMessage.writeTo(System.out);
 
         return soapMessage;
     }
@@ -330,11 +331,13 @@ public class RLCClient implements Serializable {
     //
 
     public String verifyConnection() throws Exception {
+        String token = this.getSSOToken();
         // just see if we can get SSO Token for now
-        return this.getSSOToken();
+        return token;
     }
 
     public String executeJSONGet(URI uri) throws Exception {
+        info("Executing JSON GET: " + uri);
         String result = null;
         HttpClient httpClient = new HttpClient();
 
@@ -373,6 +376,7 @@ public class RLCClient implements Serializable {
     }
 
     public String executeJSONPut(URI uri, String putContents) throws Exception {
+        info("Executing JSON PUT: " + uri);
         String result = null;
         HttpClient httpClient = new HttpClient();
 
@@ -406,6 +410,7 @@ public class RLCClient implements Serializable {
                 throw new Exception("Micro Focus RLC returned error code: " + responseCode);
             } else {
                 result = method.getResponseBodyAsString();
+                info("PUT Response: " + result);
             }
         } catch (Exception ex) {
             throw new Exception("Error connecting to Micro Focus RLC: " + ex.getMessage());
@@ -417,6 +422,7 @@ public class RLCClient implements Serializable {
     }
 
     public String executeJSONPost(URI uri, String postContents) throws Exception {
+        info("Executing JSON POST: " + uri);
         String result = null;
         HttpClient httpClient = new HttpClient();
 
@@ -448,7 +454,7 @@ public class RLCClient implements Serializable {
                 throw new Exception("Micro Focus RLC returned error code: " + responseCode);
             } else {
                 result = method.getResponseBodyAsString();
-                //System.out.println(result);
+                info("POST Response: " + result);
             }
         } catch (Exception e) {
             throw new Exception("Error connecting to Micro Focus RLC: " + e.getMessage());
@@ -492,7 +498,10 @@ public class RLCClient implements Serializable {
         URI uri = UriBuilder.fromPath(getOeUrl()).path("idp").path("services").path("rest").path("tokenservice").build();
         String jsonBody = "{   \"credentials\": {\"username\": \"" + user +
                 "\", \"password\": \"" + password + "\"} }";
+        info("Retrieving SSO Token from: " + uri.toString());
+        info("With Body:" + jsonBody);
         if ("https".equalsIgnoreCase(uri.getScheme())) {
+            info("Using OpenSSLProtocolSocketFactory on port 443");
             ProtocolSocketFactory socketFactory = new OpenSSLProtocolSocketFactory();
             Protocol https = new Protocol("https", socketFactory, 443);
             Protocol.registerProtocol("https", https);
@@ -514,9 +523,13 @@ public class RLCClient implements Serializable {
             } else if (method.getResponseBodyAsString().isEmpty()) {
                 throw new Exception("No response from Micro Focus RLC: please check URLs and credentials");
             } else {
+                info("SSO Token Response: " + method.getResponseBodyAsString());
                 JSONObject jsonObj = new JSONObject(method.getResponseBodyAsString());
-                JSONObject tokenObj = jsonObj.getJSONObject("token");
-                token = tokenObj.getString("value");
+                JSONObject tokenObj = null;
+                if (jsonObj.has("token")) {
+                    tokenObj = jsonObj.getJSONObject("token");
+                    token = tokenObj.getString("value");
+                } else throw new Exception("Unable to find SSO Token");
             }
         } catch (Exception e) {
             throw new Exception("Error connecting to Micro Focus RLC: " + e.getMessage());
@@ -540,6 +553,14 @@ public class RLCClient implements Serializable {
 
     private void setDirectSsoInteractionHeader(HttpMethodBase method) {
         method.setRequestHeader("DirectSsoInteraction", "true");
+    }
+
+    private static void info(String text) {
+        LOGGER.info(text);
+    }
+    private static void debug(String text) {
+        if (LOGGER.isDebugEnabled())
+            LOGGER.debug(text);
     }
 
 }
